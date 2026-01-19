@@ -21,6 +21,8 @@ metadatax = {url = "https://github.com/PAM-Standardization/metadatax/archive/ref
 whitenoise = "^6.9.0"
 osekit = "^0.4.1"
 #osekit = {path = "./OSEkit", develop=true}
+xarray = "^2024.10.0"
+netcdf4 = "^1.6.5"
 graphene-django = "^3.2.3"
 graphene-django-pagination = {url = "https://github.com/instruct-br/graphene-django-pagination/archive/master.zip"}
 django-filter = ">=2"

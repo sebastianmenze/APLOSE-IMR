@@ -123,6 +123,8 @@ query getAnnotationTask(
         filename
         audioPath(analysisId: $analysisID)
         path(analysisId: $analysisID)
+        isNetcdf
+        netcdfData(analysisId: $analysisID)
         start
         duration
 

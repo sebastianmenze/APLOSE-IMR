@@ -27,6 +27,7 @@ import {
   selectIsColormapReversed,
 } from '@/features/Annotator/VisualConfiguration';
 import { selectAnalysis } from '@/features/Annotator/Analysis';
+import { NetCDFSpectrogram } from '@/features/Annotator/Spectrogram';
 
 export const AnnotatorCanvasWindow: React.FC = () => {
   const width = useWindowWidth()
@@ -162,13 +163,17 @@ export const AnnotatorCanvasWindow: React.FC = () => {
          onPointerLeave={ clearPointer }
          onMouseDown={ e => e.stopPropagation() }>
 
-      <canvas className={ canDraw ? styles.drawable : '' }
-              data-testid="drawable-canvas"
-              ref={ mainCanvasRef }
-              height={ height }
-              width={ width }
-              onMouseDown={ onStartTempAnnotation }
-              onClick={ seekAudio }/>
+      {spectrogram?.isNetcdf ? (
+        <NetCDFSpectrogram />
+      ) : (
+        <canvas className={ canDraw ? styles.drawable : '' }
+                data-testid="drawable-canvas"
+                ref={ mainCanvasRef }
+                height={ height }
+                width={ width }
+                onMouseDown={ onStartTempAnnotation }
+                onClick={ seekAudio }/>
+      )}
 
       <TimeBar/>
 

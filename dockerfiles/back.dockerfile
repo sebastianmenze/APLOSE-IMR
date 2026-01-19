@@ -5,6 +5,12 @@ WORKDIR /opt
 
 RUN mkdir -p staticfiles
 
+# Install NetCDF system libraries
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libnetcdf-dev \
+    libhdf5-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN pip install --no-cache-dir  poetry
 
 COPY pyproject.toml .

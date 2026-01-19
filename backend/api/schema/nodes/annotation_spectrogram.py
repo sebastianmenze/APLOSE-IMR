@@ -1,6 +1,7 @@
 from os import path
 from pathlib import PureWindowsPath
 from typing import Optional
+import json
 
 import graphene
 import graphene_django_optimizer
@@ -150,6 +151,22 @@ class AnnotationSpectrogramNode(BaseObjectType):
         )
 
     path = graphene.String(analysis_id=graphene.ID(required=True), required=True)
+    is_netcdf = graphene.Boolean(required=True)
+    netcdf_data = graphene.String(analysis_id=graphene.ID(required=True))
+
+    @graphene_django_optimizer.resolver_hints()
+    def resolve_is_netcdf(self: Spectrogram, info) -> bool:
+        """Return whether this spectrogram is a NetCDF file"""
+        return self.is_netcdf()
+
+    @graphene_django_optimizer.resolver_hints()
+    def resolve_netcdf_data(self: Spectrogram, info, analysis_id: int):
+        """Return NetCDF data as JSON string"""
+        analysis: SpectrogramAnalysis = self.analysis.get(id=analysis_id)
+        data = self.get_netcdf_data(analysis)
+        if data:
+            return json.dumps(data)
+        return None
 
     @graphene_django_optimizer.resolver_hints()
     def resolve_path(self: Spectrogram, info, analysis_id: int):

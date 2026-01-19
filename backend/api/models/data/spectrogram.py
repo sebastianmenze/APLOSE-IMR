@@ -3,6 +3,7 @@ import csv
 from datetime import datetime, timedelta
 from os.path import join
 from pathlib import Path
+from typing import Optional, Dict, Any
 
 from django.conf import settings
 from django.db import models
@@ -11,6 +12,13 @@ from metadatax.data.models import FileFormat
 from osekit.config import TIMESTAMP_FORMAT_EXPORTED_FILES_LOCALIZED
 from osekit.core_api.spectro_data import SpectroData
 from osekit.core_api.spectro_dataset import SpectroDataset
+
+try:
+    import xarray as xr
+    import numpy as np
+    NETCDF_AVAILABLE = True
+except ImportError:
+    NETCDF_AVAILABLE = False
 
 from .__abstract_file import AbstractFile
 from .__abstract_time_segment import TimeSegment
@@ -71,7 +79,20 @@ class SpectrogramManager(Manager):
 
         existing_spectrograms = []
         new_spectrograms = []
-        img_format, _ = FileFormat.objects.get_or_create(name="png")
+
+        # Check if we have NetCDF files
+        file_extension = "png"
+        if not analysis.dataset.legacy:
+            spectro_dataset = analysis.get_osekit_spectro_dataset()
+            if spectro_dataset.folder:
+                spectro_folder = Path(spectro_dataset.folder) / "spectrogram"
+                if spectro_folder.exists():
+                    # Check for .nc files
+                    nc_files = list(spectro_folder.glob("*.nc"))
+                    if nc_files:
+                        file_extension = "nc"
+
+        img_format, _ = FileFormat.objects.get_or_create(name=file_extension)
         dataset_spectrograms = Spectrogram.objects.filter(
             analysis__dataset=analysis.dataset
         )
@@ -156,3 +177,75 @@ class Spectrogram(AbstractFile, TimeSegment, models.Model):
     def get_spectro_data_for(self, analysis: SpectrogramAnalysis) -> SpectroData:
         spectro_dataset: SpectroDataset = analysis.get_osekit_spectro_dataset()
         return [d for d in spectro_dataset.data if d.name == self.filename].pop()
+
+    def is_netcdf(self) -> bool:
+        """Check if this spectrogram is a NetCDF file"""
+        return self.format.name == "nc"
+
+    def get_netcdf_data(self, analysis: SpectrogramAnalysis) -> Optional[Dict[str, Any]]:
+        """Read NetCDF file and return data as dictionary"""
+        if not NETCDF_AVAILABLE:
+            return None
+
+        if not self.is_netcdf():
+            return None
+
+        try:
+            # Build path to NetCDF file
+            if analysis.dataset.legacy:
+                nc_path = join(
+                    settings.DATASET_IMPORT_FOLDER,
+                    analysis.dataset.path,
+                    analysis.path,
+                    "image",
+                    f"{self.filename}.nc",
+                )
+            else:
+                spectro_dataset: SpectroDataset = analysis.get_osekit_spectro_dataset()
+                nc_path = join(
+                    str(spectro_dataset.folder),
+                    "spectrogram",
+                    f"{self.filename}.nc",
+                )
+
+            # Read NetCDF file
+            ds = xr.open_dataset(nc_path)
+
+            # Extract spectrogram data
+            spectrogram_data = ds['spectrogram'].values
+
+            # Get time and frequency arrays
+            time_coords = ds.coords['time'].values if 'time' in ds.coords else np.arange(spectrogram_data.shape[1])
+            freq_coords = ds.coords['frequency'].values if 'frequency' in ds.coords else np.arange(spectrogram_data.shape[0])
+
+            # Get attributes
+            attrs = dict(ds.attrs)
+
+            # Close dataset
+            ds.close()
+
+            # Convert numpy arrays to lists for JSON serialization
+            # Downsample if needed for large spectrograms
+            max_samples = 4000  # Maximum number of samples to send
+            time_step = max(1, spectrogram_data.shape[1] // max_samples)
+            freq_step = max(1, spectrogram_data.shape[0] // max_samples)
+
+            downsampled_data = spectrogram_data[::freq_step, ::time_step]
+            downsampled_time = time_coords[::time_step]
+            downsampled_freq = freq_coords[::freq_step]
+
+            return {
+                'spectrogram': downsampled_data.tolist(),
+                'time': downsampled_time.tolist(),
+                'frequency': downsampled_freq.tolist(),
+                'attributes': attrs,
+                'shape': list(spectrogram_data.shape),
+                'downsampling': {
+                    'time_step': int(time_step),
+                    'freq_step': int(freq_step),
+                },
+            }
+
+        except Exception as e:
+            print(f"Error reading NetCDF file: {e}")
+            return None
