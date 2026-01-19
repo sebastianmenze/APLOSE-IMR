@@ -286,12 +286,24 @@ def create_dataset_structure(base_path: str, dataset_name: str = "netcdf_example
 
     # Create analysis JSON
     # Note: folder must be the full Docker container path (/opt/datawork/...)
+    # Create SFT configuration that references all spectrograms
+    sft_config = {
+        "default_sft": {
+            "fs": sample_rate,
+            "hop": hop_size,
+            "mfft": nfft,
+            "scale_to": None,
+            "spectro_data": list(spectro_data_dict.keys()),
+            "win": [0.08] * window_size  # Dummy window array
+        }
+    }
+
     analysis_json = {
         "data": spectro_data_dict,
         "folder": f"/opt/datawork/dataset/{dataset_name}/processed/netcdf_analysis",
         "name": "netcdf_analysis",
         "scale": None,
-        "sft": {},
+        "sft": sft_config,
         "suffix": ""
     }
 
