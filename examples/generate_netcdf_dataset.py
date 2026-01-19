@@ -287,7 +287,7 @@ def create_dataset_structure(base_path: str, dataset_name: str = "netcdf_example
     # Create analysis JSON
     analysis_json = {
         "data": spectro_data_dict,
-        "folder": str(dataset_path / "processed" / "netcdf_analysis"),
+        "folder": ".",
         "name": "netcdf_analysis",
         "scale": None,
         "sft": None,
@@ -302,7 +302,7 @@ def create_dataset_structure(base_path: str, dataset_name: str = "netcdf_example
     # Create audio dataset JSON
     audio_json = {
         "files": {},
-        "folder": str(audio_path),
+        "folder": ".",
         "instrument": {
             "end_to_end_db": 150.0,
             "gain_db": 0.0,
@@ -323,16 +323,16 @@ def create_dataset_structure(base_path: str, dataset_name: str = "netcdf_example
             "netcdf_analysis": {
                 "class": "SpectroDataset",
                 "analysis": "netcdf_analysis",
-                "json": str(analysis_json_path)
+                "json": "processed/netcdf_analysis/netcdf_analysis.json"
             },
             "original": {
                 "class": "AudioDataset",
                 "analysis": "original",
-                "json": str(audio_json_path)
+                "json": "data/audio/original/original.json"
             }
         },
         "depth": 100,
-        "folder": str(dataset_path),
+        "folder": ".",
         "gps_coordinates": [60.39, 5.32],
         "instrument": {
             "end_to_end_db": 150.0,
