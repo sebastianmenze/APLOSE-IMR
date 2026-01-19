@@ -280,7 +280,7 @@ def create_dataset_structure(base_path: str, dataset_name: str = "netcdf_example
             "colormap": "viridis",
             "end": end_time.isoformat() + "+0000",
             "files": {},
-            "sft": {},
+            "sft": None,
             "v_lim": [0.0, 100.0]
         }
 
