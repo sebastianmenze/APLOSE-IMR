@@ -285,9 +285,10 @@ def create_dataset_structure(base_path: str, dataset_name: str = "netcdf_example
         }
 
     # Create analysis JSON
+    # Note: folder must be the full Docker container path (/opt/datawork/...)
     analysis_json = {
         "data": spectro_data_dict,
-        "folder": ".",
+        "folder": f"/opt/datawork/dataset/{dataset_name}/processed/netcdf_analysis",
         "name": "netcdf_analysis",
         "scale": None,
         "sft": None,
@@ -302,7 +303,7 @@ def create_dataset_structure(base_path: str, dataset_name: str = "netcdf_example
     # Create audio dataset JSON
     audio_json = {
         "files": {},
-        "folder": ".",
+        "folder": f"/opt/datawork/dataset/{dataset_name}/data/audio/original",
         "instrument": {
             "end_to_end_db": 150.0,
             "gain_db": 0.0,
@@ -332,7 +333,7 @@ def create_dataset_structure(base_path: str, dataset_name: str = "netcdf_example
             }
         },
         "depth": 100,
-        "folder": ".",
+        "folder": f"/opt/datawork/dataset/{dataset_name}",
         "gps_coordinates": [60.39, 5.32],
         "instrument": {
             "end_to_end_db": 150.0,
