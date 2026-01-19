@@ -312,17 +312,33 @@ def create_dataset_structure(base_path: str, dataset_name: str = "netcdf_example
         json.dump(analysis_json, f, indent=2)
     print(f"Created: {analysis_json_path}")
 
-    # Create audio dataset JSON
+    # Create audio dataset JSON with data entries matching spectrograms
+    audio_data_dict = {}
+    for spec_name, spec_entry in spectro_data_dict.items():
+        audio_data_dict[spec_name] = {
+            "begin": spec_entry['begin'],
+            "end": spec_entry['end'],
+            "files": {},  # No actual audio files for this test dataset
+            "instrument": {
+                "end_to_end_db": 150.0,
+                "gain_db": 0.0,
+                "peak_voltage": 1.0,
+                "sensitivity": 1.0
+            },
+            "normalization": 1,
+            "normalization_values": {
+                "mean": None,
+                "peak": None,
+                "std": None
+            },
+            "sample_rate": sample_rate
+        }
+
     audio_json = {
-        "files": {},
+        "data": audio_data_dict,
         "folder": f"/opt/datawork/dataset/{dataset_name}/data/audio/original",
-        "instrument": {
-            "end_to_end_db": 150.0,
-            "gain_db": 0.0,
-            "peak_voltage": 1.0,
-            "sensitivity": 1.0
-        },
-        "name": "original"
+        "name": "original",
+        "suffix": ""
     }
 
     audio_json_path = audio_path / "original.json"
