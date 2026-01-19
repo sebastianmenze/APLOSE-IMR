@@ -21,28 +21,33 @@ python examples/generate_netcdf_dataset.py --output /opt/datawork/dataset --name
 
 **Note:** The script requires Python 3.8+ with numpy, xarray, and netcdf4 installed. A template dataset structure is provided in `examples/example_datasets/netcdf_example/` that you can populate with your own NetCDF files if you prefer not to run the generator.
 
-This will create a dataset structure in `./example_datasets/netcdf_example/` with:
+This will create a dataset structure with:
 - 5 NetCDF spectrogram files with realistic acoustic data
 - Complete OSEkit-compatible JSON configuration files
 - Proper directory structure for APLOSE import
+- **Automatic datasets.csv entry** - the script updates datasets.csv so the dataset is immediately discoverable
 
 ### 2. Import into APLOSE
 
-#### For Development/Local Testing:
+#### Recommended: Generate Directly in Docker Volume
+
+The easiest approach is to generate the dataset directly in the Docker volume:
 
 ```bash
-# Copy the dataset to your APLOSE data directory
-cp -r ./example_datasets/netcdf_example /opt/datawork/dataset/
-
-# Or create a symlink
-ln -s $(pwd)/example_datasets/netcdf_example /opt/datawork/dataset/netcdf_example
+# Generate dataset in Docker volume (creates and updates datasets.csv automatically)
+python examples/generate_netcdf_dataset.py --output volumes/datawork/dataset --name netcdf_example
 ```
 
-#### For Docker/Production:
+#### Alternative: Copy Existing Dataset
 
 ```bash
-# Copy to your Docker volume mount
+# For development/local testing
+cp -r ./example_datasets/netcdf_example /opt/datawork/dataset/
+
+# For Docker
 cp -r ./example_datasets/netcdf_example ./volumes/datawork/dataset/
+
+# Note: You may need to manually update datasets.csv if copying
 ```
 
 ### 3. Use in APLOSE
