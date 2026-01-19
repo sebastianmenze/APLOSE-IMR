@@ -1,0 +1,211 @@
+# APLOSE NetCDF Example Dataset
+
+This directory contains tools and examples for working with NetCDF spectrograms in APLOSE.
+
+## Quick Start
+
+### 1. Generate Example Dataset
+
+Run the generator script to create a complete example dataset with NetCDF spectrograms:
+
+```bash
+# Install required dependencies (if not already installed)
+pip install xarray netcdf4 numpy
+
+# Generate the example dataset
+python examples/generate_netcdf_dataset.py
+
+# Or use a specific output location
+python examples/generate_netcdf_dataset.py --output /opt/datawork/dataset --name my_netcdf_test
+```
+
+**Note:** The script requires Python 3.8+ with numpy, xarray, and netcdf4 installed. A template dataset structure is provided in `examples/example_datasets/netcdf_example/` that you can populate with your own NetCDF files if you prefer not to run the generator.
+
+This will create a dataset structure in `./example_datasets/netcdf_example/` with:
+- 5 NetCDF spectrogram files with realistic acoustic data
+- Complete OSEkit-compatible JSON configuration files
+- Proper directory structure for APLOSE import
+
+### 2. Import into APLOSE
+
+#### For Development/Local Testing:
+
+```bash
+# Copy the dataset to your APLOSE data directory
+cp -r ./example_datasets/netcdf_example /opt/datawork/dataset/
+
+# Or create a symlink
+ln -s $(pwd)/example_datasets/netcdf_example /opt/datawork/dataset/netcdf_example
+```
+
+#### For Docker/Production:
+
+```bash
+# Copy to your Docker volume mount
+cp -r ./example_datasets/netcdf_example ./volumes/datawork/dataset/
+```
+
+### 3. Use in APLOSE
+
+1. Start APLOSE (or restart if already running)
+2. Navigate to the Dataset Import page in the web interface
+3. Import the `netcdf_example` dataset
+4. Create an annotation campaign using the imported dataset
+5. Start annotating - you'll see the interactive NetCDF visualizations!
+
+## Dataset Structure
+
+The generated dataset follows the OSEkit format:
+
+```
+netcdf_example/
+├── dataset.json                      # Main dataset configuration
+├── data/
+│   └── audio/
+│       └── original/
+│           └── original.json         # Audio dataset metadata
+└── processed/
+    └── netcdf_analysis/
+        ├── netcdf_analysis.json      # Analysis configuration
+        └── spectrogram/
+            ├── 2024_01_01_00_00_00_000000.nc
+            ├── 2024_01_01_02_00_00_000000.nc
+            ├── 2024_01_01_04_00_00_000000.nc
+            ├── 2024_01_01_06_00_00_000000.nc
+            └── 2024_01_01_08_00_00_000000.nc
+```
+
+## NetCDF File Format
+
+Each NetCDF file contains:
+
+### Data Variables:
+- `spectrogram`: 2D array (frequency × time) of power spectral density values in dB
+
+### Coordinates:
+- `time`: Array of time points in seconds
+- `frequency`: Array of frequency bins in Hz
+
+### Attributes:
+- `begin`: Start timestamp (ISO format)
+- `end`: End timestamp (ISO format)
+- `sample_rate`: Audio sample rate (Hz)
+- `window_size`: FFT window size
+- `hop_size`: Hop size between windows
+- `nfft`: FFT size
+- `db_ref`: dB reference value
+- `duration`: Total duration in seconds
+
+## Customization
+
+You can customize the generated dataset:
+
+```bash
+# Custom output location
+python examples/generate_netcdf_dataset.py --output /path/to/output
+
+# Custom dataset name
+python examples/generate_netcdf_dataset.py --name my_dataset
+
+# Both options
+python examples/generate_netcdf_dataset.py --output /opt/datawork/dataset --name test_data
+```
+
+## Features of Generated Spectrograms
+
+The example spectrograms include realistic acoustic features:
+
+1. **Background Noise**: Pink noise-like spectrum typical of ocean environments
+2. **Tonal Calls**:
+   - Low-frequency upsweep (20-80 Hz) simulating whale calls
+   - Mid-frequency downsweep (1500-3000 Hz) simulating other vocalizations
+3. **Transients**: Impulsive broadband signals simulating clicks
+4. **Continuous Tones**: Constant frequency component simulating boat noise
+
+These features make the example data suitable for:
+- Testing annotation workflows
+- Demonstrating visualization capabilities
+- Training new users
+- Development and debugging
+
+## Interactive Visualization Features
+
+When viewing NetCDF spectrograms in APLOSE, you can:
+
+- **Pan and Zoom**: Interactive navigation through the spectrogram
+- **Adjust Colorscale**: Choose from 14 different colorscales (Jet, Viridis, Hot, etc.)
+- **Adjust Thresholds**: Dynamic range control with min/max sliders
+- **Hover Information**: See exact time, frequency, and power values
+- **Annotate**: Draw boxes and points just like with PNG spectrograms
+
+## Troubleshooting
+
+### Import fails with "No spectrograms found"
+
+Make sure:
+1. NetCDF files are in the `processed/{analysis_name}/spectrogram/` directory
+2. Files have the `.nc` extension
+3. The analysis JSON file correctly references the spectrograms
+
+### Visualization doesn't load
+
+Check:
+1. Backend dependencies are installed: `xarray` and `netcdf4`
+2. Frontend dependencies are installed: `plotly.js` and `react-plotly.js`
+3. Docker containers have been rebuilt if using Docker
+
+### Python dependencies missing
+
+```bash
+# Install in the backend environment
+cd /home/user/APLOSE-IMR
+poetry install
+
+# Or with pip
+pip install xarray netcdf4 numpy
+```
+
+## Creating Your Own NetCDF Spectrograms
+
+You can create NetCDF spectrograms from your own audio data:
+
+```python
+import xarray as xr
+import numpy as np
+from datetime import datetime
+
+# Generate or load your spectrogram data
+# spectrogram_data should be a 2D array (frequency x time)
+spectrogram_data = ...  # Your spectrogram as numpy array
+time_coords = ...       # Time coordinates in seconds
+freq_coords = ...       # Frequency coordinates in Hz
+
+# Create xarray Dataset
+ds = xr.Dataset(
+    {'spectrogram': (['frequency', 'time'], spectrogram_data)},
+    coords={
+        'time': time_coords,
+        'frequency': freq_coords,
+    },
+    attrs={
+        'begin': '2024-01-01T00:00:00+0000',
+        'end': '2024-01-01T00:05:00+0000',
+        'sample_rate': 48000.0,
+        'window_size': 2048,
+        'hop_size': 512,
+        'nfft': 2048,
+        'db_ref': 1.0,
+        'duration': 300.0,
+    }
+)
+
+# Save to NetCDF file
+ds.to_netcdf('spectrogram.nc', format='NETCDF4')
+```
+
+## Support
+
+For issues or questions:
+- Check the main APLOSE documentation
+- Review the implementation in `backend/api/models/data/spectrogram.py`
+- Check frontend component in `frontend/src/features/Annotator/Spectrogram/NetCDFSpectrogram.tsx`
