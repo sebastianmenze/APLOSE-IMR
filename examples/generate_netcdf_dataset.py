@@ -223,7 +223,10 @@ def create_dataset_structure(base_path: str, dataset_name: str = "netcdf_example
 
     for i in range(5):
         begin_time = base_time + timedelta(hours=i*2)
+        # Filename for actual .nc files (without +0000 to avoid filesystem issues)
         filename = begin_time.strftime("%Y_%m_%d_%H_%M_%S_%f")
+        # Key name for JSON data (with +0000 timezone suffix to match OSEkit expectations)
+        key_name = filename + "+0000"
 
         # Create NetCDF file in OSEkit location
         nc_file = spectro_path / f"{filename}.nc"
@@ -257,7 +260,7 @@ def create_dataset_structure(base_path: str, dataset_name: str = "netcdf_example
 
         # Build spectro data entry
         end_time = begin_time + timedelta(seconds=10)
-        spectro_data_dict[filename] = {
+        spectro_data_dict[key_name] = {
             "audio_data": {
                 "begin": begin_time.isoformat() + "+0000",
                 "end": end_time.isoformat() + "+0000",
