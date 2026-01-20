@@ -110,12 +110,12 @@ export const NetCDFViewer: React.FC<NetCDFViewerProps> = ({ spectrogramPath }) =
 
   const layout = useMemo(() => ({
     xaxis: {
-      title: 'Time (s)',
+      title: { text: 'Time (s)' },
       showgrid: true,
       zeroline: false,
     },
     yaxis: {
-      title: 'Frequency (Hz)',
+      title: { text: 'Frequency (Hz)' },
       showgrid: true,
       zeroline: false,
     },
@@ -127,7 +127,7 @@ export const NetCDFViewer: React.FC<NetCDFViewerProps> = ({ spectrogramPath }) =
   const config = useMemo(() => ({
     responsive: true,
     displayModeBar: true,
-    modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+    modeBarButtonsToRemove: ['lasso2d' as const, 'select2d' as const],
     toImageButtonOptions: {
       format: 'png' as const,
       filename: 'spectrogram',
