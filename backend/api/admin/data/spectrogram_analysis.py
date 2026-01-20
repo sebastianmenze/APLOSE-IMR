@@ -16,13 +16,13 @@ class SpectrogramAnalysisAdmin(admin.ModelAdmin):
         "owner",
         "path",
         "dataset",
-        "data_duration",
-        "fft",
+        "duration",
+        "sample_rate",
+        "nfft",
         "colormap",
         "dynamic",
         "start",
         "end",
-        "legacy",
     )
     search_fields = ["name", "dataset__name"]
 
