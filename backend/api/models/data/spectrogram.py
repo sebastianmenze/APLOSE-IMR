@@ -10,9 +10,19 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q, F, Manager, QuerySet
 from metadatax.data.models import FileFormat
-from osekit.config import TIMESTAMP_FORMAT_EXPORTED_FILES_LOCALIZED
-from osekit.core_api.spectro_data import SpectroData
-from osekit.core_api.spectro_dataset import SpectroDataset
+
+# Try to import osekit for backward compatibility with legacy datasets
+try:
+    from osekit.config import TIMESTAMP_FORMAT_EXPORTED_FILES_LOCALIZED
+    from osekit.core_api.spectro_data import SpectroData
+    from osekit.core_api.spectro_dataset import SpectroDataset
+    OSEKIT_AVAILABLE = True
+except ImportError:
+    # Define constant locally if osekit not available
+    TIMESTAMP_FORMAT_EXPORTED_FILES_LOCALIZED = "%Y_%m_%d_%H_%M_%S_%f%z"
+    SpectroData = None
+    SpectroDataset = None
+    OSEKIT_AVAILABLE = False
 
 try:
     import xarray as xr
@@ -67,16 +77,36 @@ class SpectrogramManager(Manager):
                     }
                 )
         else:
-            for data in analysis.get_osekit_spectro_dataset().data:
-                spectrograms_data.append(
-                    {
-                        "filename": data.begin.strftime(
-                            TIMESTAMP_FORMAT_EXPORTED_FILES_LOCALIZED
-                        ),
-                        "start": data.begin,
-                        "end": data.end,
-                    }
-                )
+            # For new simple NetCDF datasets, use SimpleDataset
+            if not OSEKIT_AVAILABLE:
+                # Use simple dataset structure
+                from backend.utils.spectrogram.dataset import SimpleDataset
+                simple_dataset = analysis.dataset.get_simple_dataset()
+                for spec_file in simple_dataset.spectrograms:
+                    metadata = spec_file.metadata
+                    if metadata.get('begin') and metadata.get('end'):
+                        try:
+                            start = datetime.fromisoformat(metadata['begin'].replace('+0000', '').replace('Z', ''))
+                            end = datetime.fromisoformat(metadata['end'].replace('+0000', '').replace('Z', ''))
+                            spectrograms_data.append({
+                                "filename": spec_file.netcdf_path.stem,
+                                "start": start,
+                                "end": end,
+                            })
+                        except (ValueError, AttributeError):
+                            continue
+            else:
+                # Legacy OSEkit support
+                for data in analysis.get_osekit_spectro_dataset().data:
+                    spectrograms_data.append(
+                        {
+                            "filename": data.begin.strftime(
+                                TIMESTAMP_FORMAT_EXPORTED_FILES_LOCALIZED
+                            ),
+                            "start": data.begin,
+                            "end": data.end,
+                        }
+                    )
 
         existing_spectrograms = []
         new_spectrograms = []
@@ -97,14 +127,21 @@ class SpectrogramManager(Manager):
                 if nc_files:
                     file_extension = "nc"
         else:
-            # Check in OSEkit location for NetCDF files
-            spectro_dataset = analysis.get_osekit_spectro_dataset()
-            if spectro_dataset.folder:
-                spectro_folder = Path(spectro_dataset.folder) / "spectrogram"
-                if spectro_folder.exists():
-                    nc_files = list(spectro_folder.glob("*.nc"))
-                    if nc_files:
-                        file_extension = "nc"
+            # Check for NetCDF files in simple or OSEkit location
+            if not OSEKIT_AVAILABLE:
+                # Simple NetCDF structure - check if the analysis path itself is a NetCDF file
+                netcdf_path = analysis.get_netcdf_path()
+                if netcdf_path.exists() and netcdf_path.suffix == '.nc':
+                    file_extension = "nc"
+            else:
+                # Check in OSEkit location for NetCDF files
+                spectro_dataset = analysis.get_osekit_spectro_dataset()
+                if spectro_dataset.folder:
+                    spectro_folder = Path(spectro_dataset.folder) / "spectrogram"
+                    if spectro_folder.exists():
+                        nc_files = list(spectro_folder.glob("*.nc"))
+                        if nc_files:
+                            file_extension = "nc"
 
         img_format, _ = FileFormat.objects.get_or_create(name=file_extension)
         dataset_spectrograms = Spectrogram.objects.filter(

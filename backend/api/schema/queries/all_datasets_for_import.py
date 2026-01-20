@@ -7,9 +7,16 @@ from typing import Optional
 import graphene
 from django.conf import settings
 from typing_extensions import deprecated
-from osekit.public_api.dataset import (
-    Dataset as OSEkitDataset,
-)
+
+# OSEkit imports - only needed for legacy datasets
+try:
+    from osekit.public_api.dataset import (
+        Dataset as OSEkitDataset,
+    )
+    OSEKIT_AVAILABLE = True
+except ImportError:
+    OSEkitDataset = None
+    OSEKIT_AVAILABLE = False
 
 from backend.api.schema.nodes import ImportDatasetNode
 from backend.utils.schema import GraphQLPermissions, GraphQLResolve
@@ -20,7 +27,12 @@ from .all_analysis_for_import import (
 
 
 def resolve_all_datasets_available_for_import() -> [ImportDatasetNode]:
-    """List dataset available for import"""
+    """List dataset available for import (OSEkit format only)"""
+    if not OSEKIT_AVAILABLE:
+        # OSEkit not available - return empty list
+        # Use importSimpleDataset mutation for new datasets instead
+        return []
+
     folders = [
         f
         for f in listdir(settings.DATASET_IMPORT_FOLDER)
@@ -31,16 +43,20 @@ def resolve_all_datasets_available_for_import() -> [ImportDatasetNode]:
         json_path = join(settings.DATASET_IMPORT_FOLDER, folder, "dataset.json")
         if not exists(json_path):
             continue
-        dataset = OSEkitDataset.from_json(Path(json_path))
-        d = ImportDatasetNode()
-        d.name = folder
-        d.path = folder
-        d.analysis = resolve_all_spectrogram_analysis_available_for_import(
-            dataset,
-            folder=folder,
-        )
-        if len(d.analysis) > 0:
-            available_datasets.append(d)
+        try:
+            dataset = OSEkitDataset.from_json(Path(json_path))
+            d = ImportDatasetNode()
+            d.name = folder
+            d.path = folder
+            d.analysis = resolve_all_spectrogram_analysis_available_for_import(
+                dataset,
+                folder=folder,
+            )
+            if len(d.analysis) > 0:
+                available_datasets.append(d)
+        except Exception:
+            # Skip invalid OSEkit datasets
+            continue
     return available_datasets
 
 

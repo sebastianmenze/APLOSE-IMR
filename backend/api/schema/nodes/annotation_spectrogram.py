@@ -8,8 +8,16 @@ import graphene_django_optimizer
 from django.conf import settings
 from django.utils import timezone
 from graphql import GraphQLResolveInfo
-from osekit.core_api.spectro_data import SpectroData
-from osekit.core_api.spectro_dataset import SpectroDataset
+
+# OSEkit imports - only needed for legacy datasets
+try:
+    from osekit.core_api.spectro_data import SpectroData
+    from osekit.core_api.spectro_dataset import SpectroDataset
+    OSEKIT_AVAILABLE = True
+except ImportError:
+    SpectroData = None
+    SpectroDataset = None
+    OSEKIT_AVAILABLE = False
 
 from backend.api.models import (
     Spectrogram,
@@ -125,25 +133,38 @@ class AnnotationSpectrogramNode(BaseObjectType):
                 PureWindowsPath(f"{self.filename}.wav"),
             )
         else:
-            spectro_data: SpectroData = self.get_spectro_data_for(analysis)
-            audio_files = list(spectro_data.audio_data.files)
-            if len(audio_files) != 1:
+            if not OSEKIT_AVAILABLE:
+                # Simple NetCDF structure - look for corresponding WAV file
+                netcdf_path = analysis.get_netcdf_path()
+                wav_path = netcdf_path.with_suffix('.wav')
+                if wav_path.exists():
+                    audio_path = str(wav_path.relative_to(settings.DATASET_IMPORT_FOLDER))
+                    return path.join(
+                        PureWindowsPath(settings.STATIC_URL),
+                        PureWindowsPath(settings.DATASET_EXPORT_PATH),
+                        PureWindowsPath(audio_path),
+                    )
                 return None
+            else:
+                spectro_data: SpectroData = self.get_spectro_data_for(analysis)
+                audio_files = list(spectro_data.audio_data.files)
+                if len(audio_files) != 1:
+                    return None
 
-            audio_file = audio_files[0]
-            if audio_file.begin != (
-                self.start if audio_file.begin.tz else timezone.make_naive(self.start)
-            ):
-                return None
-            if audio_file.end < (
-                self.end if audio_file.end.tz else timezone.make_naive(self.end)
-            ):
-                return None
+                audio_file = audio_files[0]
+                if audio_file.begin != (
+                    self.start if audio_file.begin.tz else timezone.make_naive(self.start)
+                ):
+                    return None
+                if audio_file.end < (
+                    self.end if audio_file.end.tz else timezone.make_naive(self.end)
+                ):
+                    return None
 
-            audio_path = str(audio_file.path)
-            audio_path = (
-                audio_path.split(str(settings.DATASET_EXPORT_PATH)).pop().lstrip("\\")
-            )
+                audio_path = str(audio_file.path)
+                audio_path = (
+                    audio_path.split(str(settings.DATASET_EXPORT_PATH)).pop().lstrip("\\")
+                )
         return path.join(
             PureWindowsPath(settings.STATIC_URL),
             PureWindowsPath(settings.DATASET_EXPORT_PATH),
@@ -185,15 +206,21 @@ class AnnotationSpectrogramNode(BaseObjectType):
                 PureWindowsPath(f"{self.filename}.{self.format.name}"),
             )
         else:
-            spectro_dataset: SpectroDataset = analysis.get_osekit_spectro_dataset()
-            spectro_dataset_path = str(spectro_dataset.folder).split(
-                str(settings.DATASET_EXPORT_PATH)
-            )[1]
-            spectrogram_path = path.join(
-                PureWindowsPath(spectro_dataset_path),
-                PureWindowsPath("spectrogram"),  # TODO: avoid static path parts!!!
-                PureWindowsPath(f"{self.filename}.{self.format.name}"),
-            ).lstrip("\\")
+            if not OSEKIT_AVAILABLE:
+                # Simple NetCDF structure - NetCDF file is directly in dataset folder
+                netcdf_path = analysis.get_netcdf_path()
+                relative_path = netcdf_path.relative_to(settings.DATASET_IMPORT_FOLDER)
+                spectrogram_path = str(relative_path).replace('\\', '/')
+            else:
+                spectro_dataset: SpectroDataset = analysis.get_osekit_spectro_dataset()
+                spectro_dataset_path = str(spectro_dataset.folder).split(
+                    str(settings.DATASET_EXPORT_PATH)
+                )[1]
+                spectrogram_path = path.join(
+                    PureWindowsPath(spectro_dataset_path),
+                    PureWindowsPath("spectrogram"),  # TODO: avoid static path parts!!!
+                    PureWindowsPath(f"{self.filename}.{self.format.name}"),
+                ).lstrip("\\")
         return path.join(
             PureWindowsPath(settings.STATIC_URL),
             PureWindowsPath(settings.DATASET_EXPORT_PATH),

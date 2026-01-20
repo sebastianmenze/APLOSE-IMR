@@ -4,10 +4,18 @@ from os.path import join, isfile, exists
 import graphene
 from django.conf import settings
 from typing_extensions import deprecated
-from osekit.public_api.dataset import (
-    Dataset as OSEkitDataset,
-    SpectroDataset as OSEkitSpectroDataset,
-)
+
+# OSEkit imports - only needed for legacy datasets
+try:
+    from osekit.public_api.dataset import (
+        Dataset as OSEkitDataset,
+        SpectroDataset as OSEkitSpectroDataset,
+    )
+    OSEKIT_AVAILABLE = True
+except ImportError:
+    OSEkitDataset = None
+    OSEkitSpectroDataset = None
+    OSEKIT_AVAILABLE = False
 
 from backend.api.models import SpectrogramAnalysis, Dataset
 from backend.api.schema.nodes import ImportAnalysisNode

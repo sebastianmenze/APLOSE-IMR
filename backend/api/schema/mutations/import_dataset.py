@@ -11,10 +11,18 @@ from graphene import (
     Mutation,
 )
 from graphql import GraphQLError
-from osekit.core_api.spectro_dataset import SpectroDataset
-from osekit.public_api.dataset import (
-    Dataset as OSEkitDataset,
-)
+
+# OSEkit imports - only needed for legacy datasets
+try:
+    from osekit.core_api.spectro_dataset import SpectroDataset
+    from osekit.public_api.dataset import (
+        Dataset as OSEkitDataset,
+    )
+    OSEKIT_AVAILABLE = True
+except ImportError:
+    SpectroDataset = None
+    OSEkitDataset = None
+    OSEKIT_AVAILABLE = False
 
 from backend.api.models import Dataset
 from backend.utils.schema import GraphQLResolve, GraphQLPermissions
@@ -92,6 +100,11 @@ class ImportDatasetMutation(Mutation):
                     )
 
         else:
+            if not OSEKIT_AVAILABLE:
+                raise GraphQLError(
+                    message="OSEkit is not available. For new datasets, use importSimpleDataset mutation instead. "
+                    "This mutation is only for legacy OSEkit datasets."
+                )
             json_path = join(settings.DATASET_IMPORT_FOLDER, path, "dataset.json")
             d = OSEkitDataset.from_json(Path(json_path))
             for [analysis, d] in d.datasets.items():
