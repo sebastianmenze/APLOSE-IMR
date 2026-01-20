@@ -5,10 +5,11 @@ WORKDIR /opt
 
 RUN mkdir -p staticfiles
 
-# Install NetCDF system libraries
+# Install NetCDF and audio libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libnetcdf-dev \
     libhdf5-dev \
+    libsndfile1 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir  poetry

@@ -2,14 +2,20 @@
 import json
 import os
 from pathlib import Path
+import logging
 
 import numpy as np
 import xarray as xr
 from django.http import JsonResponse
+from django.conf import settings
 from rest_framework.decorators import action
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import status
+
+from backend.api.models import SpectrogramAnalysis
+
+logger = logging.getLogger(__name__)
 
 
 class NetCDFViewSet(ViewSet):
@@ -144,5 +150,97 @@ class NetCDFViewSet(ViewSet):
         except Exception as e:
             return Response(
                 {'error': f'Failed to read example file: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['get'], url_path='dataset-spectrogram')
+    def get_dataset_spectrogram(self, request):
+        """
+        Get spectrogram data for a dataset analysis.
+
+        Query parameters:
+            analysis_id: ID of the SpectrogramAnalysis
+            downsample: Optional downsampling factor (default: 1, no downsampling)
+
+        Returns:
+            JSON response with spectrogram data
+        """
+        analysis_id = request.query_params.get('analysis_id')
+
+        if not analysis_id:
+            return Response(
+                {'error': 'analysis_id parameter required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Get analysis
+            analysis = SpectrogramAnalysis.objects.get(pk=analysis_id)
+        except SpectrogramAnalysis.DoesNotExist:
+            return Response(
+                {'error': f'SpectrogramAnalysis not found: {analysis_id}'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            # Get NetCDF file path
+            netcdf_path = analysis.get_netcdf_path()
+
+            if not netcdf_path.exists():
+                return Response(
+                    {'error': f'NetCDF file not found: {netcdf_path}'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Open and parse NetCDF file
+            ds = xr.open_dataset(netcdf_path)
+
+            # Get downsampling factor
+            downsample = int(request.query_params.get('downsample', 1))
+
+            # Extract and optionally downsample data
+            spectrogram = ds['spectrogram'].values
+            time = ds['time'].values
+            frequency = ds['frequency'].values
+
+            if downsample > 1:
+                # Downsample for performance
+                spectrogram = spectrogram[::downsample, ::downsample]
+                time = time[::downsample]
+                frequency = frequency[::downsample]
+                logger.info(f"Downsampled by factor {downsample}: {spectrogram.shape}")
+
+            # Convert numpy types to Python types for JSON serialization
+            response_data = {
+                'spectrogram': spectrogram.tolist(),
+                'time': time.tolist(),
+                'frequency': frequency.tolist(),
+                'attributes': {k: str(v) for k, v in ds.attrs.items()},
+                'shape': list(spectrogram.shape),
+                'analysis': {
+                    'id': analysis.id,
+                    'name': analysis.name,
+                    'dataset': analysis.dataset.name,
+                    'start': analysis.start.isoformat() if analysis.start else None,
+                    'end': analysis.end.isoformat() if analysis.end else None,
+                    'sample_rate': analysis.sample_rate,
+                    'duration': analysis.duration,
+                },
+            }
+
+            if downsample > 1:
+                response_data['downsampling'] = {
+                    'factor': downsample,
+                    'original_shape': [len(ds['frequency']), len(ds['time'])],
+                }
+
+            ds.close()
+
+            return JsonResponse(response_data)
+
+        except Exception as e:
+            logger.error(f"Failed to load spectrogram for analysis {analysis_id}: {e}")
+            return Response(
+                {'error': f'Failed to load spectrogram: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

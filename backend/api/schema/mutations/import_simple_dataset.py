@@ -87,9 +87,6 @@ class ImportSimpleDatasetMutation(Mutation):
 
         for spec_file in simple_dataset.spectrograms:
             try:
-                # Get metadata
-                metadata = spec_file.metadata
-
                 # Create unique name for this analysis (using NetCDF filename)
                 analysis_name = spec_file.netcdf_path.stem
 
@@ -102,15 +99,15 @@ class ImportSimpleDatasetMutation(Mutation):
                     skipped_count += 1
                     continue
 
-                # Create SpectrogramAnalysis
-                analysis = SpectrogramAnalysis.objects.create(
+                # Get relative path from DATASET_IMPORT_FOLDER
+                relative_path = str(spec_file.netcdf_path.relative_to(settings.DATASET_IMPORT_FOLDER))
+
+                # Use manager method to create analysis
+                analysis = SpectrogramAnalysis.objects.import_for_dataset(
                     dataset=dataset,
                     name=analysis_name,
-                    path=str(spec_file.netcdf_path.relative_to(settings.DATASET_IMPORT_FOLDER)),
-                    start=metadata.get('begin', ''),
-                    end=metadata.get('end', ''),
-                    # Store additional metadata in a JSON field if needed
-                    # For now, we'll just use the required fields
+                    path=relative_path,
+                    owner=info.context.user
                 )
 
                 imported_count += 1
