@@ -28,7 +28,13 @@ Wait for containers to start (about 30 seconds).
 
 ### 3. Import Dataset
 
-Access the GraphQL API at `http://localhost:8080/graphql` and run:
+Run the import command inside the Docker container:
+
+```bash
+docker compose --env-file test.env exec osmose_back poetry run python manage.py import_simple_dataset example_marine_mammals --name "Marine Mammals Example"
+```
+
+**Alternative:** Use GraphQL at `http://localhost:8080/graphql`:
 
 ```graphql
 mutation {
@@ -186,6 +192,59 @@ print(response.json())
 }
 ```
 
+**Option C: Management Command (Recommended for Docker)**
+
+Run directly inside the Docker container - no HTTP connection needed:
+
+```bash
+# Basic usage with automatic name
+docker compose --env-file test.env exec osmose_back poetry run python manage.py import_simple_dataset my_deployment
+
+# With custom dataset name
+docker compose --env-file test.env exec osmose_back poetry run python manage.py import_simple_dataset my_deployment --name "My Deployment"
+
+# Specify owner user
+docker compose --env-file test.env exec osmose_back poetry run python manage.py import_simple_dataset my_deployment --name "My Deployment" --user admin
+```
+
+**Expected Output:**
+```
+======================================================================
+APLOSE Simple Dataset Import
+======================================================================
+
+Owner: admin (first superuser)
+Dataset name: My Deployment
+Folder path: my_deployment
+
+✓ Found dataset folder: /opt/datawork/dataset/my_deployment
+✓ Found 3 NetCDF spectrograms
+
+✓ Created new dataset: My Deployment
+
+Importing spectrograms...
+
+  [1/3] 2024_01_15_08_00_00 - imported
+  [2/3] 2024_01_15_09_00_00 - imported
+  [3/3] 2024_01_15_10_00_00 - imported
+
+======================================================================
+Import Summary
+======================================================================
+
+Dataset: My Deployment (ID: 1)
+Total spectrograms found: 3
+✓ Newly imported: 3
+
+✓ Import completed successfully! You can now create an annotation campaign with this dataset.
+```
+
+**Advantages:**
+- No HTTP connection issues
+- Runs directly in container
+- Better error messages
+- Shows progress for large datasets
+
 ### Step 5: Create Annotation Campaign
 
 1. **Login** to APLOSE at `http://localhost:8080`
@@ -339,7 +398,24 @@ Attributes:
    ```bash
    ls volumes/datawork/dataset/your_dataset/
    ```
-2. Paths in mutation match folder names exactly (case-sensitive)
+2. Paths in mutation/command match folder names exactly (case-sensitive)
+3. If using management command, verify files inside container:
+   ```bash
+   docker compose --env-file test.env exec osmose_back ls -la /opt/datawork/dataset/your_dataset/
+   ```
+
+### Problem: "No superuser found" (Management Command)
+
+**Solution:**
+Create a superuser first:
+```bash
+docker compose --env-file test.env exec osmose_back poetry run python manage.py createsuperuser
+```
+
+Or specify an existing user:
+```bash
+docker compose --env-file test.env exec osmose_back poetry run python manage.py import_simple_dataset your_dataset --user admin
+```
 
 ### Problem: "Failed to parse datetime from filename"
 
