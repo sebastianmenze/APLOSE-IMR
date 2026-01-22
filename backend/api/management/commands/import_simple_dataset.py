@@ -23,7 +23,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from backend.api.models import Dataset, SpectrogramAnalysis
+from backend.api.models import Dataset, SpectrogramAnalysis, Spectrogram
 from backend.utils.spectrogram.dataset import SimpleDataset
 
 User = get_user_model()
@@ -172,6 +172,9 @@ class Command(BaseCommand):
                     path=relative_path,
                     owner=owner
                 )
+
+                # Import spectrograms for this analysis (required for annotation campaigns)
+                Spectrogram.objects.import_all_for_analysis(analysis)
 
                 self.stdout.write(
                     f"  [{i}/{len(simple_dataset.spectrograms)}] "

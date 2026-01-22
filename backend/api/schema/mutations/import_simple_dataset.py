@@ -14,7 +14,7 @@ from django.db import transaction
 from graphene import String, Boolean, Mutation
 from graphql import GraphQLError
 
-from backend.api.models import Dataset, SpectrogramAnalysis
+from backend.api.models import Dataset, SpectrogramAnalysis, Spectrogram
 from backend.utils.schema import GraphQLResolve, GraphQLPermissions
 from backend.utils.spectrogram.dataset import SimpleDataset
 
@@ -109,6 +109,9 @@ class ImportSimpleDatasetMutation(Mutation):
                     path=relative_path,
                     owner=info.context.user
                 )
+
+                # Import spectrograms for this analysis (required for annotation campaigns)
+                Spectrogram.objects.import_all_for_analysis(analysis)
 
                 imported_count += 1
                 logger.debug(f"Created analysis: {analysis_name}")
