@@ -8,6 +8,7 @@ from typing import Optional, Dict, Any
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone as django_timezone
 from django.db.models import Q, F, Manager, QuerySet
 from metadatax.data.models import FileFormat
 
@@ -116,8 +117,16 @@ class SpectrogramManager(Manager):
                         metadata = spec_file.metadata
 
                         if metadata.get('begin') and metadata.get('end'):
+                            # Parse datetimes and make them timezone-aware
                             start = datetime.fromisoformat(metadata['begin'].replace('+0000', '').replace('Z', ''))
                             end = datetime.fromisoformat(metadata['end'].replace('+0000', '').replace('Z', ''))
+
+                            # Make timezone-aware if they're naive
+                            if start.tzinfo is None:
+                                start = django_timezone.make_aware(start, django_timezone.utc)
+                            if end.tzinfo is None:
+                                end = django_timezone.make_aware(end, django_timezone.utc)
+
                             spectrograms_data.append({
                                 "filename": spec_file.netcdf_path.stem,
                                 "start": start,
@@ -208,12 +217,20 @@ class SpectrogramManager(Manager):
                 new_spectrograms, ignore_conflicts=True
             )
 
-        # Combine existing and new spectrograms
-        spectrograms = existing_spectrograms + new_spectrograms
-
-        # Link spectrograms to analysis (only if not already linked)
+        # Link spectrograms to analysis
         spectrogram_analysis_rel = []
-        for spectrogram in spectrograms:
+
+        # For NEW spectrograms, always create the link (they can't be linked yet)
+        for spectrogram in new_spectrograms:
+            if spectrogram.id:  # Only if the spectrogram was actually created
+                spectrogram_analysis_rel.append(
+                    Spectrogram.analysis.through(
+                        spectrogram=spectrogram, spectrogramanalysis=analysis
+                    )
+                )
+
+        # For EXISTING spectrograms, check if already linked before creating relationship
+        for spectrogram in existing_spectrograms:
             # Check if this spectrogram is already linked to this analysis
             if not spectrogram.analysis.filter(id=analysis.id).exists():
                 spectrogram_analysis_rel.append(
@@ -236,6 +253,9 @@ class SpectrogramManager(Manager):
                         rel.save()
                     except Exception:
                         pass  # Already exists
+
+        # Combine all spectrograms for return value
+        spectrograms = existing_spectrograms + new_spectrograms
 
         logger.info(
             f"Imported {len(new_spectrograms)} new spectrograms, "

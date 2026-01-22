@@ -7,6 +7,7 @@ import logging
 from django.conf import settings
 from django.db import models
 from django.db.models import Manager
+from django.utils import timezone as django_timezone
 
 from backend.aplose.models import User
 from backend.utils.spectrogram.dataset import SpectrogramFile
@@ -53,15 +54,21 @@ class SpectrogramAnalysisManager(Manager):
 
             try:
                 start = datetime.fromisoformat(begin_str.replace('+0000', '').replace('Z', ''))
+                # Make timezone-aware if naive
+                if start.tzinfo is None:
+                    start = django_timezone.make_aware(start, django_timezone.utc)
             except (ValueError, AttributeError):
                 logger.warning(f"Could not parse start time from '{begin_str}', using epoch")
-                start = datetime(1970, 1, 1)
+                start = django_timezone.make_aware(datetime(1970, 1, 1), django_timezone.utc)
 
             try:
                 end = datetime.fromisoformat(end_str.replace('+0000', '').replace('Z', ''))
+                # Make timezone-aware if naive
+                if end.tzinfo is None:
+                    end = django_timezone.make_aware(end, django_timezone.utc)
             except (ValueError, AttributeError):
                 logger.warning(f"Could not parse end time from '{end_str}', using epoch")
-                end = datetime(1970, 1, 1)
+                end = django_timezone.make_aware(datetime(1970, 1, 1), django_timezone.utc)
 
             # Get or create default colormap
             colormap, _ = Colormap.objects.get_or_create(name='viridis')
