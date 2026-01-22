@@ -216,21 +216,35 @@ class SpectrogramManager(Manager):
 
         # Create new spectrograms with conflict handling
         if new_spectrograms:
-            new_spectrograms = Spectrogram.objects.bulk_create(
+            created_spectrograms = Spectrogram.objects.bulk_create(
                 new_spectrograms, ignore_conflicts=True
             )
+
+            # bulk_create with ignore_conflicts doesn't return IDs, so query for them
+            # Match by filename, start, and end times
+            new_spectrograms_with_ids = []
+            for spec in new_spectrograms:
+                matched = Spectrogram.objects.filter(
+                    filename=spec.filename,
+                    format=spec.format,
+                    start=spec.start,
+                    end=spec.end
+                ).first()
+                if matched:
+                    new_spectrograms_with_ids.append(matched)
+
+            new_spectrograms = new_spectrograms_with_ids
 
         # Link spectrograms to analysis
         spectrogram_analysis_rel = []
 
-        # For NEW spectrograms, always create the link (they can't be linked yet)
+        # For NEW spectrograms, always create the link
         for spectrogram in new_spectrograms:
-            if spectrogram.id:  # Only if the spectrogram was actually created
-                spectrogram_analysis_rel.append(
-                    Spectrogram.analysis.through(
-                        spectrogram=spectrogram, spectrogramanalysis=analysis
-                    )
+            spectrogram_analysis_rel.append(
+                Spectrogram.analysis.through(
+                    spectrogram=spectrogram, spectrogramanalysis=analysis
                 )
+            )
 
         # For EXISTING spectrograms, check if already linked before creating relationship
         for spectrogram in existing_spectrograms:
