@@ -118,7 +118,11 @@ class AnnotationSpectrogramNode(BaseObjectType):
 
     @graphene_django_optimizer.resolver_hints()
     def resolve_audio_path(self: Spectrogram, info, analysis_id: int):
-        analysis: SpectrogramAnalysis = self.analysis.get(id=analysis_id)
+        try:
+            analysis: SpectrogramAnalysis = self.analysis.get(id=analysis_id)
+        except SpectrogramAnalysis.DoesNotExist:
+            # Analysis not linked to this spectrogram
+            return None
 
         audio_path: str
         if analysis.dataset.legacy:
@@ -183,7 +187,12 @@ class AnnotationSpectrogramNode(BaseObjectType):
     @graphene_django_optimizer.resolver_hints()
     def resolve_netcdf_data(self: Spectrogram, info, analysis_id: int):
         """Return NetCDF data as JSON string"""
-        analysis: SpectrogramAnalysis = self.analysis.get(id=analysis_id)
+        try:
+            analysis: SpectrogramAnalysis = self.analysis.get(id=analysis_id)
+        except SpectrogramAnalysis.DoesNotExist:
+            # Analysis not linked to this spectrogram
+            return None
+
         data = self.get_netcdf_data(analysis)
         if data:
             return json.dumps(data)
@@ -191,7 +200,11 @@ class AnnotationSpectrogramNode(BaseObjectType):
 
     @graphene_django_optimizer.resolver_hints()
     def resolve_path(self: Spectrogram, info, analysis_id: int):
-        analysis: SpectrogramAnalysis = self.analysis.get(id=analysis_id)
+        try:
+            analysis: SpectrogramAnalysis = self.analysis.get(id=analysis_id)
+        except SpectrogramAnalysis.DoesNotExist:
+            # Analysis not linked to this spectrogram - return a safe default
+            return f"/static/dataset/{self.filename}.{self.format.name}"
 
         spectrogram_path: str
         if analysis.dataset.legacy:

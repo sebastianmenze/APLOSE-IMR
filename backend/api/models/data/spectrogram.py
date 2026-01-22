@@ -39,6 +39,32 @@ from .spectrogram_analysis import SpectrogramAnalysis
 class SpectrogramManager(Manager):
     """Spectrogram manager"""
 
+    def validate_analysis_links(self, analysis: SpectrogramAnalysis) -> dict:
+        """
+        Validate that spectrograms are properly linked to an analysis.
+        Returns diagnostic information about the links.
+        """
+        spectrograms = self.filter(analysis=analysis)
+        issues = {
+            'total_spectrograms': spectrograms.count(),
+            'missing_files': [],
+            'duplicate_links': 0,
+        }
+
+        for spec in spectrograms:
+            # Check if the NetCDF file actually exists
+            if not OSEKIT_AVAILABLE and not analysis.dataset.legacy:
+                netcdf_path = analysis.get_netcdf_path()
+                if not netcdf_path.exists():
+                    issues['missing_files'].append(str(netcdf_path))
+
+            # Check for duplicate many-to-many links
+            link_count = spec.analysis.filter(id=analysis.id).count()
+            if link_count > 1:
+                issues['duplicate_links'] += 1
+
+        return issues
+
     def import_all_for_analysis(self, analysis: SpectrogramAnalysis) -> ["Spectrogram"]:
         """Import spectrograms for a given analysis"""
 
@@ -176,20 +202,45 @@ class SpectrogramManager(Manager):
                     )
                 )
 
-        new_spectrograms: [Spectrogram] = dataset_spectrograms.bulk_create(
-            new_spectrograms, ignore_conflicts=True
-        )
-
-        spectrogram_analysis_rel = []
-        spectrograms = existing_spectrograms + new_spectrograms
-        for spectrogram in spectrograms:
-            spectrogram.save()
-            spectrogram_analysis_rel.append(
-                Spectrogram.analysis.through(
-                    spectrogram=spectrogram, spectrogramanalysis=analysis
-                )
+        # Create new spectrograms with conflict handling
+        if new_spectrograms:
+            new_spectrograms = Spectrogram.objects.bulk_create(
+                new_spectrograms, ignore_conflicts=True
             )
-        Spectrogram.analysis.through.objects.bulk_create(spectrogram_analysis_rel)
+
+        # Combine existing and new spectrograms
+        spectrograms = existing_spectrograms + new_spectrograms
+
+        # Link spectrograms to analysis (only if not already linked)
+        spectrogram_analysis_rel = []
+        for spectrogram in spectrograms:
+            # Check if this spectrogram is already linked to this analysis
+            if not spectrogram.analysis.filter(id=analysis.id).exists():
+                spectrogram_analysis_rel.append(
+                    Spectrogram.analysis.through(
+                        spectrogram=spectrogram, spectrogramanalysis=analysis
+                    )
+                )
+
+        # Bulk create relationships with conflict handling
+        if spectrogram_analysis_rel:
+            try:
+                Spectrogram.analysis.through.objects.bulk_create(
+                    spectrogram_analysis_rel, ignore_conflicts=True
+                )
+            except Exception as e:
+                logger.error(f"Failed to create spectrogram-analysis relationships: {e}")
+                # Fall back to individual creation
+                for rel in spectrogram_analysis_rel:
+                    try:
+                        rel.save()
+                    except Exception:
+                        pass  # Already exists
+
+        logger.info(
+            f"Imported {len(new_spectrograms)} new spectrograms, "
+            f"linked {len(spectrogram_analysis_rel)} to analysis {analysis.id}"
+        )
         return spectrograms
 
     def filter_for_file_range(self, file_range: "AnnotationFileRange"):

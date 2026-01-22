@@ -174,12 +174,19 @@ class Command(BaseCommand):
                 )
 
                 # Import spectrograms for this analysis (required for annotation campaigns)
-                Spectrogram.objects.import_all_for_analysis(analysis)
+                spectrograms = Spectrogram.objects.import_all_for_analysis(analysis)
+
+                # Validate the import
+                validation = Spectrogram.objects.validate_analysis_links(analysis)
+
+                status_msg = f"imported ({validation['total_spectrograms']} spectrograms)"
+                if validation['missing_files']:
+                    status_msg += f" - WARNING: {len(validation['missing_files'])} missing files"
 
                 self.stdout.write(
                     f"  [{i}/{len(simple_dataset.spectrograms)}] "
                     f"{analysis_name} - "
-                    f"{self.style.SUCCESS('imported')}"
+                    f"{self.style.SUCCESS(status_msg)}"
                 )
                 imported_count += 1
 
