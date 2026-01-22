@@ -372,12 +372,27 @@ class Spectrogram(AbstractFile, TimeSegment, models.Model):
             downsampled_time = time_coords[::time_step]
             downsampled_freq = freq_coords[::freq_step]
 
+            # Convert numpy types to native Python types for JSON serialization
+            def convert_numpy_types(obj):
+                """Convert numpy types to native Python types"""
+                if isinstance(obj, np.integer):
+                    return int(obj)
+                elif isinstance(obj, np.floating):
+                    return float(obj)
+                elif isinstance(obj, np.ndarray):
+                    return obj.tolist()
+                elif isinstance(obj, list):
+                    return [convert_numpy_types(item) for item in obj]
+                elif isinstance(obj, dict):
+                    return {key: convert_numpy_types(value) for key, value in obj.items()}
+                return obj
+
             return {
-                'spectrogram': downsampled_data.tolist(),
-                'time': downsampled_time.tolist(),
-                'frequency': downsampled_freq.tolist(),
-                'attributes': attrs,
-                'shape': list(spectrogram_data.shape),
+                'spectrogram': convert_numpy_types(downsampled_data),
+                'time': convert_numpy_types(downsampled_time),
+                'frequency': convert_numpy_types(downsampled_freq),
+                'attributes': convert_numpy_types(attrs),
+                'shape': [int(s) for s in spectrogram_data.shape],  # Explicitly convert to int
                 'downsampling': {
                     'time_step': int(time_step),
                     'freq_step': int(freq_step),
