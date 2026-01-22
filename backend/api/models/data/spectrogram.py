@@ -1,6 +1,7 @@
 """Spectrogram model"""
 import csv
 import json
+import logging
 from datetime import datetime, timedelta
 from os.path import join
 from pathlib import Path
@@ -11,6 +12,8 @@ from django.db import models
 from django.utils import timezone as django_timezone
 from django.db.models import Q, F, Manager, QuerySet
 from metadatax.data.models import FileFormat
+
+logger = logging.getLogger(__name__)
 
 # Try to import osekit for backward compatibility with legacy datasets
 try:
