@@ -42,7 +42,7 @@ export const NetCDFSpectrogram: React.FC = () => {
 
   // Capture label/confidence at start of selection to prevent label jumping
   const selectionStartLabelRef = useRef<string | null>(null);
-  const selectionStartConfidenceRef = useRef<string | null>(null);
+  const selectionStartConfidenceRef = useRef<string | null | undefined>(null);
 
   // Annotation support
   const addAnnotation = useAddAnnotation();
