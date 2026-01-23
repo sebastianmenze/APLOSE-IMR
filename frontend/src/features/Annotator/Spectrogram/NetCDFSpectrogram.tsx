@@ -51,7 +51,7 @@ export const NetCDFSpectrogram: React.FC = () => {
   const isDrawingEnabled = useAppSelector(selectIsDrawingEnabled);
 
   // Audio support
-  const { seek, play, pause, state: audioState } = useAudio();
+  const { seek, time: audioTime, duration: audioDuration } = useAudio();
 
   // Parse NetCDF data from GraphQL response
   useEffect(() => {
@@ -130,6 +130,20 @@ export const NetCDFSpectrogram: React.FC = () => {
           range: [netcdfData.frequency[0], netcdfData.frequency[netcdfData.frequency.length - 1]],
         };
 
+    // Add playback position indicator line
+    const shapes = audioDuration && audioTime !== undefined ? [{
+      type: 'line' as const,
+      x0: audioTime,
+      x1: audioTime,
+      y0: 0,
+      y1: 1,
+      yref: 'paper' as const,
+      line: {
+        color: '#ff0000',
+        width: 2,
+      },
+    }] : [];
+
     return {
       width: width,
       height: plotHeight,
@@ -146,6 +160,7 @@ export const NetCDFSpectrogram: React.FC = () => {
         zeroline: false,
         ...yAxisConfig,
       },
+      shapes: shapes,
       dragmode: isDrawingEnabled ? ('select' as const) : (false as const),
       hovermode: 'closest' as const,
       plot_bgcolor: '#000',
@@ -154,7 +169,7 @@ export const NetCDFSpectrogram: React.FC = () => {
         color: '#fff',
       },
     };
-  }, [netcdfData, width, height, isDrawingEnabled, yAxisScale]);
+  }, [netcdfData, width, height, isDrawingEnabled, yAxisScale, audioTime, audioDuration]);
 
   const config = useMemo(() => ({
     displayModeBar: true,
@@ -184,15 +199,6 @@ export const NetCDFSpectrogram: React.FC = () => {
       selectionStartConfidenceRef.current = focusedConfidence;
     }
   }, [isDrawingEnabled, focusedLabel, focusedConfidence]);
-
-  // Handle play/pause button
-  const handlePlayPause = useCallback(() => {
-    if (audioState === 'play') {
-      pause();
-    } else {
-      play();
-    }
-  }, [audioState, play, pause]);
 
   // Handle box selection to create annotations
   const onSelected = useCallback((event: any) => {
@@ -273,8 +279,6 @@ export const NetCDFSpectrogram: React.FC = () => {
         dataMax={dataRange.max}
         yAxisScale={yAxisScale}
         onYAxisScaleChange={setYAxisScale}
-        audioState={audioState}
-        onPlayPause={handlePlayPause}
       />
       <div className={styles.plotContainer} onMouseDown={onPlotMouseDown}>
         <Plot
