@@ -9,6 +9,7 @@ import { useAppSelector } from '@/features/App';
 import { selectFocusLabel } from '@/features/Annotator/Label';
 import { selectFocusConfidence } from '@/features/Annotator/Confidence';
 import { selectIsDrawingEnabled } from '@/features/Annotator/UX';
+import { useAudio } from '@/features/Audio';
 
 interface NetCDFData {
   spectrogram: number[][];
@@ -48,6 +49,9 @@ export const NetCDFSpectrogram: React.FC = () => {
   const focusedLabel = useAppSelector(selectFocusLabel);
   const focusedConfidence = useAppSelector(selectFocusConfidence);
   const isDrawingEnabled = useAppSelector(selectIsDrawingEnabled);
+
+  // Audio support
+  const { seek } = useAudio();
 
   // Parse NetCDF data from GraphQL response
   useEffect(() => {
@@ -162,14 +166,22 @@ export const NetCDFSpectrogram: React.FC = () => {
     modeBarButtonsToAdd: [],
   }), []);
 
-  // Capture label/confidence when selection starts (mousedown on plot)
-  const onPlotClick = useCallback(() => {
+  // Handle plot clicks: capture label for annotations AND seek audio
+  const onPlotClick = useCallback((event: any) => {
+    // Capture label/confidence for potential annotation
     if (isDrawingEnabled && focusedLabel) {
-      // Store current label and confidence when starting a selection
       selectionStartLabelRef.current = focusedLabel;
       selectionStartConfidenceRef.current = focusedConfidence;
     }
-  }, [isDrawingEnabled, focusedLabel, focusedConfidence]);
+
+    // Seek audio to clicked time position
+    if (event?.points && event.points.length > 0) {
+      const clickedTime = event.points[0].x;
+      if (typeof clickedTime === 'number') {
+        seek(clickedTime);
+      }
+    }
+  }, [isDrawingEnabled, focusedLabel, focusedConfidence, seek]);
 
   // Handle box selection to create annotations
   const onSelected = useCallback((event: any) => {
