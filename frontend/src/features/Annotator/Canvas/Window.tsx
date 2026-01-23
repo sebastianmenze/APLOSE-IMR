@@ -153,10 +153,14 @@ export const AnnotatorCanvasWindow: React.FC = () => {
   return <div className={ styles.spectrogramWindow }
               ref={ windowCanvasRef }
               onScroll={ onFileScrolled }
-              style={ { width: `${ Y_AXIS_WIDTH + containerWidth }px` } }>
+              style={ { width: spectrogram?.isNetcdf ? '100%' : `${ Y_AXIS_WIDTH + containerWidth }px` } }>
 
-    <TimeAxis/>
-    <FrequencyAxis/>
+    {!spectrogram?.isNetcdf && (
+      <>
+        <TimeAxis/>
+        <FrequencyAxis/>
+      </>
+    )}
 
     <div className={ styles.spectrogram }
          onWheel={ onWheel }
@@ -175,7 +179,7 @@ export const AnnotatorCanvasWindow: React.FC = () => {
                 onClick={ seekAudio }/>
       )}
 
-      <TimeBar/>
+      {!spectrogram?.isNetcdf && <TimeBar/>}
 
       { allAnnotations.map(annotation => <StrongAnnotation key={ annotation.id } annotation={ annotation }/>) }
     </div>
