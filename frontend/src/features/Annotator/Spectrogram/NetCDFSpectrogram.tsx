@@ -208,7 +208,7 @@ export const NetCDFSpectrogram: React.FC = () => {
   const config = useMemo(() => ({
     displayModeBar: true,
     displaylogo: false,
-    scrollZoom: true,
+    scrollZoom: false,
     doubleClick: 'reset' as const,
     responsive: true,
     modeBarButtonsToRemove: ['lasso2d'] as any,

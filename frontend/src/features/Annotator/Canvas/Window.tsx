@@ -181,7 +181,7 @@ export const AnnotatorCanvasWindow: React.FC = () => {
 
       {!spectrogram?.isNetcdf && <TimeBar/>}
 
-      { allAnnotations.map(annotation => <StrongAnnotation key={ annotation.id } annotation={ annotation }/>) }
+      {!spectrogram?.isNetcdf && allAnnotations.map(annotation => <StrongAnnotation key={ annotation.id } annotation={ annotation }/>) }
     </div>
 
     <AcousticFeatures/>
