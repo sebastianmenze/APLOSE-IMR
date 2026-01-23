@@ -4,12 +4,13 @@ import { AnnotationType, useAnnotationTask } from '@/api';
 import { useWindowHeight, useWindowWidth } from '@/features/Annotator/Canvas';
 import { NetCDFControls } from './NetCDFControls';
 import styles from './NetCDFSpectrogram.module.scss';
-import { useAddAnnotation } from '@/features/Annotator/Annotation';
-import { useAppSelector } from '@/features/App';
+import { useAddAnnotation, selectAllAnnotations, selectAnnotation } from '@/features/Annotator/Annotation';
+import { useAppSelector, useAppDispatch } from '@/features/App';
 import { selectFocusLabel } from '@/features/Annotator/Label';
 import { selectFocusConfidence } from '@/features/Annotator/Confidence';
 import { selectIsDrawingEnabled } from '@/features/Annotator/UX';
 import { useAudio } from '@/features/Audio';
+import { focusAnnotation } from '@/features/Annotator/Annotation/slice';
 
 interface NetCDFData {
   spectrogram: number[][];
@@ -49,6 +50,9 @@ export const NetCDFSpectrogram: React.FC = () => {
   const focusedLabel = useAppSelector(selectFocusLabel);
   const focusedConfidence = useAppSelector(selectFocusConfidence);
   const isDrawingEnabled = useAppSelector(selectIsDrawingEnabled);
+  const allAnnotations = useAppSelector(selectAllAnnotations);
+  const focusedAnnotation = useAppSelector(selectAnnotation);
+  const dispatch = useAppDispatch();
 
   // Audio support - only for playback indicator and seek
   const { seek, time: audioTime, duration: audioDuration } = useAudio();
@@ -131,18 +135,48 @@ export const NetCDFSpectrogram: React.FC = () => {
         };
 
     // Add playback position indicator line
-    const shapes = audioDuration && audioTime !== undefined ? [{
-      type: 'line' as const,
-      x0: audioTime,
-      x1: audioTime,
-      y0: 0,
-      y1: 1,
-      yref: 'paper' as const,
-      line: {
-        color: '#ff0000',
-        width: 2,
-      },
-    }] : [];
+    const shapes: any[] = [];
+
+    // Add playback indicator
+    if (audioDuration && audioTime !== undefined) {
+      shapes.push({
+        type: 'line' as const,
+        x0: audioTime,
+        x1: audioTime,
+        y0: 0,
+        y1: 1,
+        yref: 'paper' as const,
+        line: {
+          color: '#ff0000',
+          width: 2,
+        },
+        layer: 'above' as const,
+      });
+    }
+
+    // Add annotation boxes as Plotly shapes
+    allAnnotations.forEach((annotation) => {
+      if (annotation.type !== AnnotationType.Box) return;
+      if (!annotation.startTime || !annotation.endTime || !annotation.startFrequency || !annotation.endFrequency) return;
+
+      const isFocused = focusedAnnotation?.id === annotation.id;
+
+      shapes.push({
+        type: 'rect' as const,
+        x0: annotation.startTime,
+        x1: annotation.endTime,
+        y0: annotation.startFrequency,
+        y1: annotation.endFrequency,
+        line: {
+          color: isFocused ? '#00ff00' : '#ffff00',
+          width: isFocused ? 3 : 2,
+        },
+        fillcolor: isFocused ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 255, 0, 0.1)',
+        layer: 'above' as const,
+        // Store annotation ID for click handling
+        name: `annotation-${annotation.id}`,
+      });
+    });
 
     return {
       width: width,
@@ -169,7 +203,7 @@ export const NetCDFSpectrogram: React.FC = () => {
         color: '#fff',
       },
     };
-  }, [netcdfData, width, height, isDrawingEnabled, yAxisScale, audioTime, audioDuration]);
+  }, [netcdfData, width, height, isDrawingEnabled, yAxisScale, audioTime, audioDuration, allAnnotations, focusedAnnotation]);
 
   const config = useMemo(() => ({
     displayModeBar: true,
@@ -181,16 +215,34 @@ export const NetCDFSpectrogram: React.FC = () => {
     modeBarButtonsToAdd: [],
   }), []);
 
-  // Handle plot clicks: seek audio to clicked position
+  // Handle plot clicks: focus annotation or seek audio
   const onPlotClick = useCallback((event: any) => {
-    // Seek audio to clicked time position
+    // Check if click is on the plot (has points data)
     if (event?.points && event.points.length > 0) {
       const clickedTime = event.points[0].x;
+      const clickedFreq = event.points[0].y;
+
+      // Check if click is within any annotation bounds
+      for (const annotation of allAnnotations) {
+        if (annotation.type !== AnnotationType.Box) continue;
+        if (!annotation.startTime || !annotation.endTime || !annotation.startFrequency || !annotation.endFrequency) continue;
+
+        const inTimeRange = clickedTime >= annotation.startTime && clickedTime <= annotation.endTime;
+        const inFreqRange = clickedFreq >= annotation.startFrequency && clickedFreq <= annotation.endFrequency;
+
+        if (inTimeRange && inFreqRange) {
+          // Focus this annotation
+          dispatch(focusAnnotation(annotation));
+          return;
+        }
+      }
+
+      // No annotation clicked, seek audio to clicked position
       if (typeof clickedTime === 'number') {
         seek(clickedTime);
       }
     }
-  }, [seek]);
+  }, [seek, allAnnotations, dispatch]);
 
   // Capture label/confidence when mousedown on plot (start of drag/selection)
   const onPlotMouseDown = useCallback(() => {
