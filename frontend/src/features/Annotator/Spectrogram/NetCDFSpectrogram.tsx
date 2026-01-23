@@ -6,7 +6,7 @@ import { NetCDFControls } from './NetCDFControls';
 import styles from './NetCDFSpectrogram.module.scss';
 import { useAddAnnotation, selectAllAnnotations, selectAnnotation } from '@/features/Annotator/Annotation';
 import { useAppSelector, useAppDispatch } from '@/features/App';
-import { selectFocusLabel } from '@/features/Annotator/Label';
+import { selectFocusLabel, selectAllLabels } from '@/features/Annotator/Label';
 import { selectFocusConfidence } from '@/features/Annotator/Confidence';
 import { selectIsDrawingEnabled } from '@/features/Annotator/UX';
 import { useAudio } from '@/features/Audio';
@@ -23,6 +23,20 @@ interface NetCDFData {
     freq_step: number;
   };
 }
+
+// APLOSE label colors (from annotation-colors.css)
+const LABEL_COLORS = [
+  'rgb(0, 177, 185)',    // ion-color-0: cyan
+  'rgb(162, 59, 114)',   // ion-color-1: magenta
+  'rgb(241, 143, 1)',    // ion-color-2: orange
+  'rgb(199, 62, 29)',    // ion-color-3: red-orange
+  'rgb(187, 126, 93)',   // ion-color-4: brown
+  'rgb(234, 196, 53)',   // ion-color-5: yellow
+  'rgb(152, 206, 0)',    // ion-color-6: lime green
+  'rgb(103, 97, 168)',   // ion-color-7: purple
+  'rgb(0, 155, 114)',    // ion-color-8: teal
+  'rgb(42, 45, 52)',     // ion-color-9: dark gray
+];
 
 export const NetCDFSpectrogram: React.FC = () => {
   const { spectrogram } = useAnnotationTask();
@@ -52,6 +66,7 @@ export const NetCDFSpectrogram: React.FC = () => {
   const isDrawingEnabled = useAppSelector(selectIsDrawingEnabled);
   const allAnnotations = useAppSelector(selectAllAnnotations);
   const focusedAnnotation = useAppSelector(selectAnnotation);
+  const allLabels = useAppSelector(selectAllLabels);
   const dispatch = useAppDispatch();
 
   // Audio support - only for playback indicator and seek
@@ -161,6 +176,17 @@ export const NetCDFSpectrogram: React.FC = () => {
 
       const isFocused = focusedAnnotation?.id === annotation.id;
 
+      // Get label color based on index in allLabels
+      const labelIndex = allLabels.indexOf(annotation.label);
+      const colorIndex = labelIndex >= 0 ? labelIndex % 10 : 0;
+      const labelColor = LABEL_COLORS[colorIndex];
+
+      // Parse RGB from label color for fillcolor
+      const rgbMatch = labelColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+      const fillColor = rgbMatch
+        ? `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, 0.15)`
+        : 'rgba(255, 255, 0, 0.15)';
+
       shapes.push({
         type: 'rect' as const,
         x0: annotation.startTime,
@@ -168,10 +194,10 @@ export const NetCDFSpectrogram: React.FC = () => {
         y0: annotation.startFrequency,
         y1: annotation.endFrequency,
         line: {
-          color: isFocused ? '#00ff00' : '#ffff00',
+          color: labelColor,
           width: isFocused ? 3 : 2,
         },
-        fillcolor: isFocused ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 255, 0, 0.1)',
+        fillcolor: fillColor,
         layer: 'above' as const,
         // Store annotation ID for click handling
         name: `annotation-${annotation.id}`,
@@ -203,7 +229,7 @@ export const NetCDFSpectrogram: React.FC = () => {
         color: '#fff',
       },
     };
-  }, [netcdfData, width, height, isDrawingEnabled, yAxisScale, audioTime, audioDuration, allAnnotations, focusedAnnotation]);
+  }, [netcdfData, width, height, isDrawingEnabled, yAxisScale, audioTime, audioDuration, allAnnotations, focusedAnnotation, allLabels]);
 
   const config = useMemo(() => ({
     displayModeBar: true,
