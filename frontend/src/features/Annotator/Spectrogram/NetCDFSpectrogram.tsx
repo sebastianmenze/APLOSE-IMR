@@ -166,14 +166,8 @@ export const NetCDFSpectrogram: React.FC = () => {
     modeBarButtonsToAdd: [],
   }), []);
 
-  // Handle plot clicks: capture label for annotations AND seek audio
+  // Handle plot clicks: seek audio to clicked position
   const onPlotClick = useCallback((event: any) => {
-    // Capture label/confidence for potential annotation
-    if (isDrawingEnabled && focusedLabel) {
-      selectionStartLabelRef.current = focusedLabel;
-      selectionStartConfidenceRef.current = focusedConfidence;
-    }
-
     // Seek audio to clicked time position
     if (event?.points && event.points.length > 0) {
       const clickedTime = event.points[0].x;
@@ -181,7 +175,15 @@ export const NetCDFSpectrogram: React.FC = () => {
         seek(clickedTime);
       }
     }
-  }, [isDrawingEnabled, focusedLabel, focusedConfidence, seek]);
+  }, [seek]);
+
+  // Capture label/confidence when mousedown on plot (start of drag/selection)
+  const onPlotMouseDown = useCallback(() => {
+    if (isDrawingEnabled && focusedLabel) {
+      selectionStartLabelRef.current = focusedLabel;
+      selectionStartConfidenceRef.current = focusedConfidence;
+    }
+  }, [isDrawingEnabled, focusedLabel, focusedConfidence]);
 
   // Handle box selection to create annotations
   const onSelected = useCallback((event: any) => {
@@ -263,7 +265,7 @@ export const NetCDFSpectrogram: React.FC = () => {
         yAxisScale={yAxisScale}
         onYAxisScaleChange={setYAxisScale}
       />
-      <div className={styles.plotContainer}>
+      <div className={styles.plotContainer} onMouseDown={onPlotMouseDown}>
         <Plot
           ref={plotRef}
           data={plotData}
