@@ -188,12 +188,16 @@ export const NetCDFSpectrogram: React.FC = () => {
         ? `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, 0.15)`
         : 'rgba(255, 255, 0, 0.15)';
 
+      // Convert frequencies to log10 space if in log mode
+      const y0 = yAxisScale === 'log' ? Math.log10(annotation.startFrequency) : annotation.startFrequency;
+      const y1 = yAxisScale === 'log' ? Math.log10(annotation.endFrequency) : annotation.endFrequency;
+
       shapes.push({
         type: 'rect' as const,
         x0: annotation.startTime,
         x1: annotation.endTime,
-        y0: annotation.startFrequency,
-        y1: annotation.endFrequency,
+        y0: y0,
+        y1: y1,
         line: {
           color: labelColor,
           width: isFocused ? 3 : 2,
@@ -205,9 +209,12 @@ export const NetCDFSpectrogram: React.FC = () => {
       });
 
       // Add text label for the annotation
+      // In log mode, convert y position to log10 space
+      const textY = yAxisScale === 'log' ? Math.log10(annotation.endFrequency) : annotation.endFrequency;
+
       annotations.push({
         x: annotation.startTime,
-        y: annotation.endFrequency,
+        y: textY,
         xref: 'x' as const,
         yref: 'y' as const,
         text: annotation.label,
@@ -314,11 +321,18 @@ export const NetCDFSpectrogram: React.FC = () => {
 
     const { x, y } = event.range;
 
-    // x is time range, y is frequency range
+    // x is time range, y is frequency range (in log10 space if log mode)
     const startTime = Math.min(x[0], x[1]);
     const endTime = Math.max(x[0], x[1]);
-    const startFrequency = Math.min(y[0], y[1]);
-    const endFrequency = Math.max(y[0], y[1]);
+
+    let startFrequency = Math.min(y[0], y[1]);
+    let endFrequency = Math.max(y[0], y[1]);
+
+    // Convert from log10 space back to actual frequencies if in log mode
+    if (yAxisScale === 'log') {
+      startFrequency = Math.pow(10, startFrequency);
+      endFrequency = Math.pow(10, endFrequency);
+    }
 
     // Only create annotation if box has meaningful size
     if (endTime - startTime > 0.01 && endFrequency - startFrequency > 1) {
@@ -336,7 +350,7 @@ export const NetCDFSpectrogram: React.FC = () => {
     // Clear the stored values
     selectionStartLabelRef.current = null;
     selectionStartConfidenceRef.current = null;
-  }, [addAnnotation, isDrawingEnabled]);
+  }, [addAnnotation, isDrawingEnabled, yAxisScale]);
 
   // Restore dragmode after zoom/pan operations
   const onRelayout = useCallback((_event: any) => {
