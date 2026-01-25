@@ -216,6 +216,28 @@ export const NetCDFSpectrogram: React.FC = () => {
         // Store annotation ID for click handling
         name: `annotation-${annotation.id}`,
       });
+
+      // Add text label at top left corner of the box
+      // Use actual frequency value - Plotly handles log transformation
+      const textY = Math.max(minFreq, Math.min(maxFreq, annotation.endFrequency));
+
+      annotations.push({
+        x: annotation.startTime,
+        y: textY,
+        xref: 'x' as const,
+        yref: 'y' as const,
+        text: annotation.label,
+        showarrow: false,
+        font: {
+          color: labelColor,
+          size: 12,
+          family: 'Arial, sans-serif',
+        },
+        bgcolor: 'rgba(0, 0, 0, 0.7)',
+        borderpad: 3,
+        xanchor: 'left' as const,
+        yanchor: 'top' as const,
+      });
     });
 
     return {
