@@ -170,6 +170,12 @@ export const NetCDFSpectrogram: React.FC = () => {
       });
     }
 
+    // Get y-axis range limits for clamping
+    const minFreq = netcdfData.frequency[0];
+    const maxFreq = netcdfData.frequency[netcdfData.frequency.length - 1];
+    const yMin = yAxisScale === 'log' ? Math.log10(minFreq) : minFreq;
+    const yMax = yAxisScale === 'log' ? Math.log10(maxFreq) : maxFreq;
+
     // Add annotation boxes as Plotly shapes
     allAnnotations.forEach((annotation) => {
       if (annotation.type !== AnnotationType.Box) return;
@@ -188,9 +194,18 @@ export const NetCDFSpectrogram: React.FC = () => {
         ? `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, 0.15)`
         : 'rgba(255, 255, 0, 0.15)';
 
-      // Convert frequencies to log10 space if in log mode
-      const y0 = yAxisScale === 'log' ? Math.log10(annotation.startFrequency) : annotation.startFrequency;
-      const y1 = yAxisScale === 'log' ? Math.log10(annotation.endFrequency) : annotation.endFrequency;
+      // Convert frequencies to log10 space if in log mode, with clamping
+      let y0, y1;
+      if (yAxisScale === 'log') {
+        // Clamp frequencies to valid range before taking log
+        const clampedStart = Math.max(minFreq, Math.min(maxFreq, annotation.startFrequency));
+        const clampedEnd = Math.max(minFreq, Math.min(maxFreq, annotation.endFrequency));
+        y0 = Math.log10(clampedStart);
+        y1 = Math.log10(clampedEnd);
+      } else {
+        y0 = annotation.startFrequency;
+        y1 = annotation.endFrequency;
+      }
 
       shapes.push({
         type: 'rect' as const,
@@ -209,8 +224,16 @@ export const NetCDFSpectrogram: React.FC = () => {
       });
 
       // Add text label for the annotation
-      // In log mode, convert y position to log10 space
-      const textY = yAxisScale === 'log' ? Math.log10(annotation.endFrequency) : annotation.endFrequency;
+      // In log mode, convert y position to log10 space and clamp to visible range
+      let textY;
+      if (yAxisScale === 'log') {
+        const clampedEndFreq = Math.max(minFreq, Math.min(maxFreq, annotation.endFrequency));
+        textY = Math.log10(clampedEndFreq);
+        // Ensure textY is within the y-axis range
+        textY = Math.max(yMin, Math.min(yMax, textY));
+      } else {
+        textY = annotation.endFrequency;
+      }
 
       annotations.push({
         x: annotation.startTime,
