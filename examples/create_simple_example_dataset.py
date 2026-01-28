@@ -174,9 +174,22 @@ def create_example_dataset(
             datetime_format='%Y_%m_%d_%H_%M_%S'
         )
 
-        results = generator.process_folder(output_folder, output_folder, "*.wav")
+        # Process each WAV file with unique output names for each FFT size
+        results = []
+        for wav_file in sorted(output_folder.glob("*.wav")):
+            # Create output filename with FFT size suffix
+            output_filename = f"{wav_file.stem}_fft{config['nfft']}.nc"
+            output_path = output_folder / output_filename
+
+            try:
+                _, saved_path = generator.wav_to_spectrogram(wav_file, output_path)
+                results.append((wav_file, saved_path))
+                logger.info(f"    ✓ {output_filename}")
+            except Exception as e:
+                logger.error(f"    ✗ Failed to process {wav_file.name}: {e}")
+
         all_results.extend(results)
-        logger.info(f"    ✓ Created {len(results)} spectrograms")
+        logger.info(f"    ✓ Created {len(results)} spectrograms with FFT {config['nfft']}")
 
     logger.info("")
     logger.info("="*60)
