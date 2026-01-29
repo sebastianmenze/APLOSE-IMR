@@ -198,10 +198,33 @@ class NetCDFViewSet(ViewSet):
             # Get downsampling factor
             downsample = int(request.query_params.get('downsample', 1))
 
-            # Extract and optionally downsample data
-            spectrogram = ds['spectrogram'].values
-            time = ds['time'].values
-            frequency = ds['frequency'].values
+            # Check if this is a multi-FFT file
+            fft_sizes_str = ds.attrs.get('fft_sizes', '')
+            is_multi_fft = bool(fft_sizes_str)
+
+            if is_multi_fft:
+                # Multi-FFT file: extract the spectrogram for this analysis's FFT size
+                nfft = analysis.nfft
+                var_name = f'spectrogram_fft{nfft}'
+                time_coord = f'time_fft{nfft}'
+                freq_coord = f'frequency_fft{nfft}'
+
+                if var_name not in ds.data_vars:
+                    ds.close()
+                    return Response(
+                        {'error': f'FFT size {nfft} not found in NetCDF file. Available: {list(ds.data_vars.keys())}'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                # Extract and optionally downsample data
+                spectrogram = ds[var_name].values
+                time = ds[time_coord].values
+                frequency = ds[freq_coord].values
+            else:
+                # Legacy single-FFT file
+                spectrogram = ds['spectrogram'].values
+                time = ds['time'].values
+                frequency = ds['frequency'].values
 
             if downsample > 1:
                 # Downsample for performance
@@ -229,9 +252,14 @@ class NetCDFViewSet(ViewSet):
             }
 
             if downsample > 1:
+                if is_multi_fft:
+                    original_shape = [len(ds[freq_coord]), len(ds[time_coord])]
+                else:
+                    original_shape = [len(ds['frequency']), len(ds['time'])]
+
                 response_data['downsampling'] = {
                     'factor': downsample,
-                    'original_shape': [len(ds['frequency']), len(ds['time'])],
+                    'original_shape': original_shape,
                 }
 
             ds.close()

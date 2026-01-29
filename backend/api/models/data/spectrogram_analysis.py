@@ -190,4 +190,4 @@ class SpectrogramAnalysis(AbstractAnalysis, models.Model):
 
     def get_spectrogram_file(self) -> SpectrogramFile:
         """Get SpectrogramFile object for this analysis"""
-        return SpectrogramFile(self.get_netcdf_path())
+        return SpectrogramFile(self.get_netcdf_path(), nfft=self.nfft)

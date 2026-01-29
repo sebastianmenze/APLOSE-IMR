@@ -365,12 +365,31 @@ class Spectrogram(AbstractFile, TimeSegment, models.Model):
             # Read NetCDF file
             ds = xr.open_dataset(nc_path)
 
-            # Extract spectrogram data
-            spectrogram_data = ds['spectrogram'].values
+            # Check if this is a multi-FFT file
+            fft_sizes_str = ds.attrs.get('fft_sizes', '')
+            is_multi_fft = bool(fft_sizes_str)
 
-            # Get time and frequency arrays
-            time_coords = ds.coords['time'].values if 'time' in ds.coords else np.arange(spectrogram_data.shape[1])
-            freq_coords = ds.coords['frequency'].values if 'frequency' in ds.coords else np.arange(spectrogram_data.shape[0])
+            if is_multi_fft:
+                # Multi-FFT file: extract the spectrogram for this analysis's FFT size
+                nfft = analysis.nfft
+                var_name = f'spectrogram_fft{nfft}'
+                time_coord = f'time_fft{nfft}'
+                freq_coord = f'frequency_fft{nfft}'
+
+                if var_name not in ds.data_vars:
+                    logger.error(f"Variable {var_name} not found in {nc_path}. Available: {list(ds.data_vars.keys())}")
+                    ds.close()
+                    return None
+
+                # Extract spectrogram data for this FFT size
+                spectrogram_data = ds[var_name].values
+                time_coords = ds.coords[time_coord].values if time_coord in ds.coords else np.arange(spectrogram_data.shape[1])
+                freq_coords = ds.coords[freq_coord].values if freq_coord in ds.coords else np.arange(spectrogram_data.shape[0])
+            else:
+                # Legacy single-FFT file
+                spectrogram_data = ds['spectrogram'].values
+                time_coords = ds.coords['time'].values if 'time' in ds.coords else np.arange(spectrogram_data.shape[1])
+                freq_coords = ds.coords['frequency'].values if 'frequency' in ds.coords else np.arange(spectrogram_data.shape[0])
 
             # Get attributes
             attrs = dict(ds.attrs)
