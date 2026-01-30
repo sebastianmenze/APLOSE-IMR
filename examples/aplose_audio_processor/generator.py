@@ -2,6 +2,7 @@
 Main generator class for creating APLOSE-compatible NetCDF files from audio.
 """
 
+import math
 import os
 import sys
 from pathlib import Path
@@ -394,7 +395,7 @@ class AploseAudioProcessor:
             'end': end_dt.isoformat(),
             'sample_rate': float(sample_rate),
             'window': self.window,
-            'duration': int(round(duration)),  # GraphQL schema expects integer
+            'duration': int(math.ceil(duration)),  # Ceil to allow annotations at full duration
             'audio_file': audio_file,
             'normalize_audio': int(self.normalize_audio),  # NetCDF doesn't support bool
         }
