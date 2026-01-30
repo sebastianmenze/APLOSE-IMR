@@ -174,16 +174,25 @@
 .head {
   display: grid;
   gap: 1rem;
+  background: #1a1a1a;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  color: white;
 
   .title {
     display: grid;
     justify-items: center;
     position: relative;
 
+    h2 {
+      color: white;
+    }
+
     ion-note {
       align-items: center;
       display: grid;
       grid-auto-flow: column;
+      color: rgba(255, 255, 255, 0.7);
     }
   }
 
