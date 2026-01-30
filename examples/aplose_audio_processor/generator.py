@@ -382,7 +382,7 @@ class AploseAudioProcessor:
             'window': self.window,
             'duration': float(duration),
             'audio_file': audio_file,
-            'normalize_audio': self.normalize_audio,
+            'normalize_audio': int(self.normalize_audio),  # NetCDF doesn't support bool
         }
 
         # Single-FFT mode
