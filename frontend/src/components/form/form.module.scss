@@ -116,19 +116,26 @@
       border: none;
       outline-color: var(--ion-color-primary);
       accent-color: var(--ion-color-primary);
+      color: white;
 
       p {
         white-space: nowrap;
         text-overflow: ellipsis;
         max-width: 100%;
         overflow: hidden;
+        color: white;
       }
 
-      &.placeholder, ion-icon {
-        color: rgba(var(--ion-color-dark-rgb), 0.6);
+      &.placeholder {
+        color: rgba(255, 255, 255, 0.6);
+
+        p {
+          color: rgba(255, 255, 255, 0.6);
+        }
       }
 
       ion-icon {
+        color: rgba(255, 255, 255, 0.6);
         font-size: 1rem;
       }
     }
