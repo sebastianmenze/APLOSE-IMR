@@ -380,7 +380,7 @@ class AploseAudioProcessor:
             'end': end_dt.isoformat(),
             'sample_rate': float(sample_rate),
             'window': self.window,
-            'duration': float(duration),
+            'duration': int(round(duration)),  # GraphQL schema expects integer
             'audio_file': audio_file,
             'normalize_audio': int(self.normalize_audio),  # NetCDF doesn't support bool
         }
