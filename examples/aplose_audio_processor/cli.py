@@ -146,6 +146,11 @@ Examples:
         default=100,
         help='DPI for PNG images (default: 100)'
     )
+    parser.add_argument(
+        '--png-linear-frequency',
+        action='store_true',
+        help='Use linear frequency scale for PNG images (default: log scale)'
+    )
 
     # Other options
     parser.add_argument(
@@ -195,7 +200,9 @@ Examples:
         print(f"  dB reference: {args.db_ref}")
     print(f"  Compression level: {args.compression_level}")
     if args.generate_png:
-        print(f"  PNG export: enabled (colormap: {args.png_colormap}, dpi: {args.png_dpi})")
+        freq_scale = 'linear' if args.png_linear_frequency else 'log'
+        print(f"  PNG export: enabled (colormap: {args.png_colormap}, dpi: {args.png_dpi}, freq scale: {freq_scale})")
+        print(f"  PNG files will be generated for all {len(args.fft_sizes)} FFT size(s)")
 
     processor = AploseAudioProcessor(
         fft_sizes=args.fft_sizes,
@@ -212,7 +219,8 @@ Examples:
         filename_prefix=args.filename_prefix,
         generate_png=args.generate_png,
         png_colormap=args.png_colormap,
-        png_dpi=args.png_dpi
+        png_dpi=args.png_dpi,
+        png_log_frequency=not args.png_linear_frequency
     )
 
     # Process files

@@ -48,7 +48,8 @@ class AploseAudioProcessor:
         filename_prefix: Optional[str] = None,
         generate_png: bool = False,
         png_colormap: str = 'viridis',
-        png_dpi: int = 100
+        png_dpi: int = 100,
+        png_log_frequency: bool = True
     ):
         """
         Initialize the APLOSE audio processor.
@@ -70,6 +71,7 @@ class AploseAudioProcessor:
             generate_png: If True, also generate PNG spectrogram images.
             png_colormap: Colormap for PNG images ('viridis', 'plasma', 'hot', 'jet', etc.).
             png_dpi: DPI for PNG images (default: 100).
+            png_log_frequency: If True (default), render PNG with log frequency axis.
         """
         # Handle single or multiple FFT sizes
         if isinstance(fft_sizes, int):
@@ -87,6 +89,7 @@ class AploseAudioProcessor:
         self.generate_png = generate_png
         self.png_colormap = png_colormap
         self.png_dpi = png_dpi
+        self.png_log_frequency = png_log_frequency
 
         # Initialize audio processor
         self.audio_processor = AudioProcessor(
@@ -165,23 +168,24 @@ class AploseAudioProcessor:
 
                 if len(self.fft_sizes) == 1:
                     # Single FFT
-                    netcdf_path, spec_data, freqs, times = self._create_single_fft_netcdf(
-                        wav_path, metadata, return_data=True
+                    netcdf_path = self._create_single_fft_netcdf(
+                        wav_path, metadata, return_data=False
                     )
                 else:
                     # Multi-FFT
-                    netcdf_path, spec_data, freqs, times = self._create_multi_fft_netcdf(
-                        wav_path, metadata, return_data=True
+                    netcdf_path = self._create_multi_fft_netcdf(
+                        wav_path, metadata, return_data=False
                     )
 
                 all_wav_files.append(wav_path)
                 all_netcdf_files.append(netcdf_path)
 
-                # Generate PNG if enabled
+                # Generate PNGs for all FFT sizes if enabled
                 if self.generate_png:
-                    png_path = self._create_png(wav_path, spec_data, freqs, times)
-                    all_png_files.append(png_path)
-                    print(f"    Created PNG: {Path(png_path).name}")
+                    png_paths = self._create_pngs_for_all_fft_sizes(wav_path)
+                    all_png_files.extend(png_paths)
+                    for png_path in png_paths:
+                        print(f"    Created PNG: {Path(png_path).name}")
 
         # Restore original datetime_format
         self.datetime_format = original_datetime_format
@@ -246,22 +250,23 @@ class AploseAudioProcessor:
             print(f"Creating spectrogram for: {Path(wav_path).name}")
 
             if len(self.fft_sizes) == 1:
-                netcdf_path, spec_data, freqs, times = self._create_single_fft_netcdf(
-                    wav_path, metadata, return_data=True
+                netcdf_path = self._create_single_fft_netcdf(
+                    wav_path, metadata, return_data=False
                 )
             else:
-                netcdf_path, spec_data, freqs, times = self._create_multi_fft_netcdf(
-                    wav_path, metadata, return_data=True
+                netcdf_path = self._create_multi_fft_netcdf(
+                    wav_path, metadata, return_data=False
                 )
 
             all_wav_files.append(wav_path)
             all_netcdf_files.append(netcdf_path)
 
-            # Generate PNG if enabled
+            # Generate PNGs for all FFT sizes if enabled
             if self.generate_png:
-                png_path = self._create_png(wav_path, spec_data, freqs, times)
-                all_png_files.append(png_path)
-                print(f"  Created PNG: {Path(png_path).name}")
+                png_paths = self._create_pngs_for_all_fft_sizes(wav_path)
+                all_png_files.extend(png_paths)
+                for png_path in png_paths:
+                    print(f"  Created PNG: {Path(png_path).name}")
 
         # Restore original datetime_format
         self.datetime_format = original_datetime_format
@@ -482,7 +487,8 @@ class AploseAudioProcessor:
         wav_path: str,
         spec_data: np.ndarray,
         freqs: np.ndarray,
-        times: np.ndarray
+        times: np.ndarray,
+        nfft: Optional[int] = None
     ) -> str:
         """
         Create a PNG spectrogram image.
@@ -492,6 +498,7 @@ class AploseAudioProcessor:
             spec_data: Spectrogram data array (frequency x time).
             freqs: Frequency array.
             times: Time array.
+            nfft: FFT size (used for naming when multiple FFT sizes).
 
         Returns:
             Path to created PNG file.
@@ -500,47 +507,114 @@ class AploseAudioProcessor:
             import matplotlib
             matplotlib.use('Agg')  # Non-interactive backend
             import matplotlib.pyplot as plt
+            from matplotlib.colors import LogNorm
         except ImportError:
             raise ImportError(
                 "matplotlib is required for PNG export. "
                 "Install it with: pip install matplotlib"
             )
 
-        # Create figure without axes for clean image
+        # Create figure
         fig, ax = plt.subplots(figsize=(12, 4), dpi=self.png_dpi)
 
         # Calculate vmin/vmax for color scaling (use percentiles for robustness)
         vmin = np.percentile(spec_data, 5)
         vmax = np.percentile(spec_data, 95)
 
-        # Plot spectrogram
-        img = ax.pcolormesh(
-            times, freqs, spec_data,
-            shading='auto',
-            cmap=self.png_colormap,
-            vmin=vmin,
-            vmax=vmax
-        )
+        # For log frequency axis, we need to handle the frequency grid differently
+        if self.png_log_frequency:
+            # Use log scale on y-axis
+            # Filter out zero/negative frequencies for log scale
+            valid_freq_mask = freqs > 0
+            freqs_valid = freqs[valid_freq_mask]
+            spec_data_valid = spec_data[valid_freq_mask, :]
 
-        # Add labels and colorbar
-        ax.set_xlabel('Time (s)')
-        ax.set_ylabel('Frequency (Hz)')
-        ax.set_ylim(freqs[0], freqs[-1])
+            # Plot spectrogram with log y-axis
+            img = ax.pcolormesh(
+                times, freqs_valid, spec_data_valid,
+                shading='auto',
+                cmap=self.png_colormap,
+                vmin=vmin,
+                vmax=vmax
+            )
+
+            # Set log scale on y-axis
+            ax.set_yscale('log')
+            ax.set_ylim(max(freqs_valid[0], 1), freqs_valid[-1])
+        else:
+            # Linear frequency axis
+            img = ax.pcolormesh(
+                times, freqs, spec_data,
+                shading='auto',
+                cmap=self.png_colormap,
+                vmin=vmin,
+                vmax=vmax
+            )
+            ax.set_ylim(freqs[0], freqs[-1])
+
+        # Style the plot
+        ax.set_xlabel('Time (s)', color='white')
+        ax.set_ylabel('Frequency (Hz)', color='white')
+        ax.tick_params(colors='white')
+        ax.set_facecolor('black')
 
         # Add colorbar
         cbar = plt.colorbar(img, ax=ax, pad=0.01)
-        cbar.set_label('dB')
+        cbar.set_label('dB', color='white')
+        cbar.ax.yaxis.set_tick_params(color='white')
+        plt.setp(plt.getp(cbar.ax.axes, 'yticklabels'), color='white')
+
+        # Set figure background to black
+        fig.patch.set_facecolor('black')
 
         # Tight layout
         plt.tight_layout()
 
-        # Save PNG
-        png_path = str(Path(wav_path).with_suffix('.png'))
+        # Generate filename - include FFT size if provided
+        wav_stem = Path(wav_path).stem
+        if nfft is not None:
+            png_filename = f"{wav_stem}_fft{nfft}.png"
+        else:
+            png_filename = f"{wav_stem}.png"
+        png_path = str(Path(wav_path).parent / png_filename)
+
         plt.savefig(png_path, dpi=self.png_dpi, bbox_inches='tight',
                     facecolor='black', edgecolor='none')
         plt.close(fig)
 
         return png_path
+
+    def _create_pngs_for_all_fft_sizes(
+        self,
+        wav_path: str
+    ) -> List[str]:
+        """
+        Create PNG spectrogram images for all FFT sizes.
+
+        Args:
+            wav_path: Path to WAV file.
+
+        Returns:
+            List of paths to created PNG files.
+        """
+        # Read audio once
+        audio, sample_rate = sf.read(wav_path)
+
+        png_paths = []
+
+        for nfft in self.fft_sizes:
+            hop_length = int(nfft * self.hop_length_factor)
+
+            # Calculate spectrogram
+            spec_data, freqs, times = self._calculate_spectrogram(
+                audio, sample_rate, nfft, hop_length
+            )
+
+            # Create PNG with FFT size in filename
+            png_path = self._create_png(wav_path, spec_data, freqs, times, nfft=nfft)
+            png_paths.append(png_path)
+
+        return png_paths
 
     def _calculate_spectrogram(
         self,

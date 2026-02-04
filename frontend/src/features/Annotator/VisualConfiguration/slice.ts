@@ -27,7 +27,7 @@ const initialState: VisualConfigurationState = {
   colormap: undefined,
   isColormapReversed: false,
   viewMode: 'png', // Default to PNG for faster loading
-  frequencyScaleType: 'linear', // Default to linear y-axis
+  frequencyScaleType: 'log', // Default to log y-axis (matches PNG rendering)
 
   _campaignDefaultColormap: undefined,
   _campaignDefaultReversedColormap: undefined,
