@@ -2,7 +2,8 @@
 Import simple dataset mutation for APLOSE
 
 This mutation imports datasets in the new simple format:
-- One folder containing WAV files and corresponding NetCDF spectrograms
+- One folder containing WAV files and corresponding spectrograms
+- Supports both data PNG + JSON (preferred) and NetCDF formats
 - No complex OSEkit structure needed
 """
 
@@ -17,7 +18,7 @@ from graphql import GraphQLError
 
 from backend.api.models import Dataset, SpectrogramAnalysis, Spectrogram
 from backend.utils.schema import GraphQLResolve, GraphQLPermissions
-from backend.utils.spectrogram.dataset import SimpleDataset
+from backend.utils.spectrogram.dataset import SimpleDataset, DataPngSpectrogramFile
 
 logger = logging.getLogger(__name__)
 
@@ -66,11 +67,13 @@ class ImportSimpleDatasetMutation(Mutation):
         # Check if dataset has spectrograms
         if not simple_dataset.spectrograms:
             raise GraphQLError(
-                f"No NetCDF spectrograms found in {dataset_folder}. "
-                "Please generate spectrograms first using the spectrogram generator."
+                f"No spectrograms found in {dataset_folder}. "
+                "Please generate spectrograms first using: "
+                "python -m aplose_audio_processor input/ output/ --generate-data-png"
             )
 
-        logger.info(f"Found {len(simple_dataset.spectrograms)} spectrograms")
+        format_label = "data PNG" if simple_dataset.format == 'data_png' else "NetCDF"
+        logger.info(f"Found {len(simple_dataset.spectrograms)} {format_label} spectrograms")
 
         # Create or get Dataset record
         dataset, created = Dataset.objects.get_or_create(
@@ -159,7 +162,12 @@ class ImportSimpleDatasetMutation(Mutation):
         # Now import spectrograms and link them to their corresponding analyses
         from metadatax.data.models import FileFormat
 
-        img_format, _ = FileFormat.objects.get_or_create(name='nc')
+        # Determine file format based on dataset format
+        if simple_dataset.format == 'data_png':
+            img_format, _ = FileFormat.objects.get_or_create(name='png')
+        else:
+            img_format, _ = FileFormat.objects.get_or_create(name='nc')
+
         total_imported = 0
         total_skipped = 0
 
@@ -171,6 +179,12 @@ class ImportSimpleDatasetMutation(Mutation):
                 try:
                     spec_metadata = spec_file.metadata
 
+                    # Get filename for logging
+                    if isinstance(spec_file, DataPngSpectrogramFile):
+                        file_name = spec_file.json_path.name
+                    else:
+                        file_name = spec_file.netcdf_path.name
+
                     # Parse timestamps
                     try:
                         spec_start = datetime.fromisoformat(spec_metadata['begin'].replace('+0000', '').replace('Z', ''))
@@ -178,7 +192,7 @@ class ImportSimpleDatasetMutation(Mutation):
                             from django.utils import timezone as django_timezone
                             spec_start = django_timezone.make_aware(spec_start, django_timezone.utc)
                     except (ValueError, AttributeError, KeyError):
-                        logger.warning(f"Could not parse start time for {spec_file.netcdf_path.name}")
+                        logger.warning(f"Could not parse start time for {file_name}")
                         continue
 
                     try:
@@ -187,10 +201,15 @@ class ImportSimpleDatasetMutation(Mutation):
                             from django.utils import timezone as django_timezone
                             spec_end = django_timezone.make_aware(spec_end, django_timezone.utc)
                     except (ValueError, AttributeError, KeyError):
-                        logger.warning(f"Could not parse end time for {spec_file.netcdf_path.name}")
+                        logger.warning(f"Could not parse end time for {file_name}")
                         continue
 
-                    filename = spec_file.netcdf_path.stem
+                    # Get filename for database
+                    if isinstance(spec_file, DataPngSpectrogramFile):
+                        # For PNG: filename_fft1024_data.json -> filename_fft1024
+                        filename = spec_file.json_path.stem.replace('_data', '')
+                    else:
+                        filename = spec_file.netcdf_path.stem
 
                     # Check if spectrogram already exists
                     existing = Spectrogram.objects.filter(
@@ -220,7 +239,12 @@ class ImportSimpleDatasetMutation(Mutation):
                         logger.debug(f"Created spectrogram: {filename} for {analysis.name}")
 
                 except Exception as e:
-                    logger.error(f"Failed to import {spec_file.netcdf_path.name}: {e}")
+                    # Get filename for error message
+                    if isinstance(spec_file, DataPngSpectrogramFile):
+                        err_file_name = spec_file.json_path.name
+                    else:
+                        err_file_name = spec_file.netcdf_path.name
+                    logger.error(f"Failed to import {err_file_name}: {e}")
                     # Continue with next file instead of failing completely
                     continue
 

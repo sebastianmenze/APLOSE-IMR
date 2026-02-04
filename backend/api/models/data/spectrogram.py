@@ -322,15 +322,23 @@ class Spectrogram(AbstractFile, TimeSegment, models.Model):
         return [d for d in spectro_dataset.data if d.name == self.filename].pop()
 
     def is_netcdf(self) -> bool:
-        """Check if this spectrogram is a NetCDF file"""
-        return self.format.name == "nc"
+        """Check if this spectrogram supports interactive Plotly display (NetCDF or data PNG)"""
+        return self.format.name in ("nc", "png")
 
     def get_netcdf_data(self, analysis: SpectrogramAnalysis) -> Optional[Dict[str, Any]]:
-        """Read NetCDF file and return data as dictionary"""
-        if not NETCDF_AVAILABLE:
+        """Read spectrogram data file and return data as dictionary.
+
+        Supports both NetCDF and data PNG + JSON formats.
+        """
+        if not self.is_netcdf():
             return None
 
-        if not self.is_netcdf():
+        # Check if this is a data PNG file
+        if self.format.name == "png":
+            return self._get_data_png_data(analysis)
+
+        # Otherwise, it's a NetCDF file
+        if not NETCDF_AVAILABLE:
             return None
 
         try:
@@ -436,4 +444,102 @@ class Spectrogram(AbstractFile, TimeSegment, models.Model):
 
         except Exception as e:
             print(f"Error reading NetCDF file: {e}")
+            return None
+
+    def _get_data_png_data(self, analysis: SpectrogramAnalysis) -> Optional[Dict[str, Any]]:
+        """Read data PNG + JSON file and return data as dictionary."""
+        try:
+            from PIL import Image
+
+            # Build path to JSON metadata file
+            # filename format: base_fft1024 -> base_fft1024_data.json
+            json_filename = f"{self.filename}_data.json"
+            json_path = Path(settings.DATASET_IMPORT_FOLDER) / analysis.path / json_filename
+
+            if not json_path.exists():
+                logger.warning(f"JSON metadata file not found: {json_path}")
+                return None
+
+            # Load JSON metadata
+            with open(json_path, 'r') as f:
+                json_data = json.load(f)
+
+            # Get PNG path from JSON
+            png_filename = json_data.get('png_file', f"{self.filename}_data.png")
+            png_path = json_path.parent / png_filename
+
+            if not png_path.exists():
+                logger.warning(f"PNG file not found: {png_path}")
+                return None
+
+            # Load PNG as numpy array
+            img = Image.open(png_path)
+            img_array = np.array(img, dtype=np.uint16)
+
+            # Get encoding parameters
+            encoding = json_data.get('encoding', {})
+            db_min = encoding.get('db_min', 0)
+            db_max = encoding.get('db_max', 1)
+            db_range = db_max - db_min
+
+            # Convert pixels back to dB values
+            # PNG is stored with low frequencies at top after flipud, so flip back
+            img_array = np.flipud(img_array)
+            spectrogram_data = (img_array.astype(np.float32) / 65535) * db_range + db_min
+
+            # Generate time and frequency arrays
+            spec_info = json_data.get('spectrogram', {})
+            n_times = spec_info.get('n_times', spectrogram_data.shape[1])
+            n_freqs = spec_info.get('n_frequencies', spectrogram_data.shape[0])
+            time_min = spec_info.get('time_min', 0)
+            time_max = spec_info.get('time_max', 1)
+            freq_min = spec_info.get('frequency_min', 0)
+            freq_max = spec_info.get('frequency_max', 1)
+
+            time_coords = np.linspace(time_min, time_max, n_times)
+            freq_coords = np.linspace(freq_min, freq_max, n_freqs)
+
+            # Build attributes from JSON metadata
+            attrs = {
+                'begin': json_data.get('temporal', {}).get('begin', ''),
+                'end': json_data.get('temporal', {}).get('end', ''),
+                'sample_rate': json_data.get('audio', {}).get('sample_rate', 0),
+                'duration': int(json_data.get('audio', {}).get('duration', 0)),
+                'nfft': json_data.get('analysis', {}).get('nfft', 0),
+                'hop_length': json_data.get('analysis', {}).get('hop_length', 0),
+                'audio_file': json_data.get('audio', {}).get('filename', ''),
+                'window': json_data.get('analysis', {}).get('window', 'hann'),
+                'normalize_audio': int(json_data.get('analysis', {}).get('normalize_audio', False)),
+            }
+
+            # Add calibration info
+            calibration = json_data.get('calibration', {})
+            if calibration.get('db_fullscale') is not None:
+                attrs['db_fullscale'] = calibration['db_fullscale']
+            elif calibration.get('db_ref') is not None:
+                attrs['db_ref'] = calibration['db_ref']
+
+            # Downsample if needed for large spectrograms
+            max_samples = 4000
+            time_step = max(1, spectrogram_data.shape[1] // max_samples)
+            freq_step = max(1, spectrogram_data.shape[0] // max_samples)
+
+            downsampled_data = spectrogram_data[::freq_step, ::time_step]
+            downsampled_time = time_coords[::time_step]
+            downsampled_freq = freq_coords[::freq_step]
+
+            return {
+                'spectrogram': downsampled_data.tolist(),
+                'time': downsampled_time.tolist(),
+                'frequency': downsampled_freq.tolist(),
+                'attributes': attrs,
+                'shape': [int(s) for s in spectrogram_data.shape],
+                'downsampling': {
+                    'time_step': int(time_step),
+                    'freq_step': int(freq_step),
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"Error reading data PNG file: {e}")
             return None

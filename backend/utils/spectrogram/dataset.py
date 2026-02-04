@@ -1,10 +1,12 @@
 """
 Simple dataset structure for APLOSE
 
-Reads a folder containing WAV files and corresponding NetCDF spectrograms
+Reads a folder containing WAV files and corresponding spectrograms
+(NetCDF or data PNG + JSON format)
 """
 
 import json
+import re
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional
@@ -17,6 +19,14 @@ try:
 except ImportError:
     logger.warning("xarray not installed. Install with: pip install xarray netcdf4")
     xr = None
+
+try:
+    from PIL import Image
+    import numpy as np
+except ImportError:
+    logger.warning("Pillow/numpy not installed for PNG support")
+    Image = None
+    np = None
 
 
 class SpectrogramFile:
@@ -165,13 +175,202 @@ class SpectrogramFile:
         return f"SpectrogramFile(netcdf={self.netcdf_path.name}, wav={self.wav_path.name if self.wav_path else 'None'})"
 
 
+class DataPngSpectrogramFile:
+    """Represents a data PNG + JSON spectrogram file"""
+
+    def __init__(self, json_path: Path, wav_path: Optional[Path] = None):
+        """
+        Initialize data PNG spectrogram file
+
+        Args:
+            json_path: Path to JSON metadata file (PNG path is derived from it)
+            wav_path: Optional path to corresponding WAV file
+        """
+        self.json_path = json_path
+        self.png_path = None
+        self.wav_path = wav_path
+        self.nfft = None
+        self._metadata = None
+        self._json_data = None
+
+    @property
+    def metadata(self) -> Dict:
+        """Get metadata from JSON file"""
+        if self._metadata is None:
+            self._metadata = self._read_metadata()
+        return self._metadata
+
+    @property
+    def json_data(self) -> Dict:
+        """Get raw JSON data"""
+        if self._json_data is None:
+            self._load_json()
+        return self._json_data
+
+    def _load_json(self):
+        """Load JSON metadata file"""
+        try:
+            with open(self.json_path, 'r') as f:
+                self._json_data = json.load(f)
+
+            # Set PNG path from JSON
+            png_filename = self._json_data.get('png_file', '')
+            if png_filename:
+                self.png_path = self.json_path.parent / png_filename
+            else:
+                # Derive from JSON filename
+                self.png_path = self.json_path.with_suffix('.png')
+
+            # Extract FFT size from JSON or filename
+            if 'analysis' in self._json_data:
+                self.nfft = self._json_data['analysis'].get('nfft')
+
+        except Exception as e:
+            logger.error(f"Failed to load JSON from {self.json_path}: {e}")
+            self._json_data = {}
+
+    def _read_metadata(self) -> Dict:
+        """Read and convert metadata to standard format"""
+        if self._json_data is None:
+            self._load_json()
+
+        if not self._json_data:
+            return {}
+
+        try:
+            json_data = self._json_data
+
+            # Convert to standard metadata format (compatible with NetCDF)
+            metadata = {
+                'begin': json_data.get('temporal', {}).get('begin', ''),
+                'end': json_data.get('temporal', {}).get('end', ''),
+                'sample_rate': json_data.get('audio', {}).get('sample_rate', 0),
+                'duration': int(json_data.get('audio', {}).get('duration', 0)),
+                'nfft': json_data.get('analysis', {}).get('nfft', 0),
+                'hop_length': json_data.get('analysis', {}).get('hop_length', 0),
+                'audio_file': json_data.get('audio', {}).get('filename', ''),
+                'time_shape': json_data.get('spectrogram', {}).get('n_times', 0),
+                'frequency_shape': json_data.get('spectrogram', {}).get('n_frequencies', 0),
+                'frequency_min': json_data.get('spectrogram', {}).get('frequency_min', 0),
+                'frequency_max': json_data.get('spectrogram', {}).get('frequency_max', 0),
+                # PNG-specific fields
+                'is_data_png': True,
+                'db_min': json_data.get('encoding', {}).get('db_min', 0),
+                'db_max': json_data.get('encoding', {}).get('db_max', 0),
+            }
+
+            # Add calibration info
+            calibration = json_data.get('calibration', {})
+            if calibration.get('db_fullscale') is not None:
+                metadata['db_fullscale'] = calibration['db_fullscale']
+            elif calibration.get('db_ref') is not None:
+                metadata['db_ref'] = calibration['db_ref']
+
+            return metadata
+
+        except Exception as e:
+            logger.error(f"Failed to read metadata from {self.json_path}: {e}")
+            return {}
+
+    def load_spectrogram_data(self) -> Optional[Dict]:
+        """
+        Load and decode PNG to get spectrogram data
+
+        Returns:
+            Dictionary with 'spectrogram', 'time', 'frequency' arrays
+        """
+        if Image is None or np is None:
+            raise ImportError("Pillow and numpy are required for PNG support")
+
+        if self._json_data is None:
+            self._load_json()
+
+        if not self.png_path or not self.png_path.exists():
+            logger.error(f"PNG file not found: {self.png_path}")
+            return None
+
+        try:
+            # Load PNG as 16-bit grayscale
+            img = Image.open(self.png_path)
+            img_array = np.array(img, dtype=np.uint16)
+
+            # Get encoding parameters
+            encoding = self._json_data.get('encoding', {})
+            db_min = encoding.get('db_min', 0)
+            db_max = encoding.get('db_max', 1)
+            db_range = db_max - db_min
+
+            # Convert pixels back to dB values
+            # PNG is stored with low frequencies at top after flipud, so flip back
+            img_array = np.flipud(img_array)
+            spectrogram = (img_array.astype(np.float32) / 65535) * db_range + db_min
+
+            # Generate time and frequency arrays
+            spec_info = self._json_data.get('spectrogram', {})
+            n_times = spec_info.get('n_times', spectrogram.shape[1])
+            n_freqs = spec_info.get('n_frequencies', spectrogram.shape[0])
+            time_min = spec_info.get('time_min', 0)
+            time_max = spec_info.get('time_max', 1)
+            freq_min = spec_info.get('frequency_min', 0)
+            freq_max = spec_info.get('frequency_max', 1)
+
+            time = np.linspace(time_min, time_max, n_times)
+            frequency = np.linspace(freq_min, freq_max, n_freqs)
+
+            return {
+                'spectrogram': spectrogram,
+                'time': time,
+                'frequency': frequency,
+                'attributes': self.metadata
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to load PNG spectrogram from {self.png_path}: {e}")
+            return None
+
+    def get_netcdf_data_json(self) -> Optional[str]:
+        """
+        Get spectrogram data in JSON format compatible with NetCDF frontend
+
+        Returns:
+            JSON string with spectrogram data
+        """
+        data = self.load_spectrogram_data()
+        if data is None:
+            return None
+
+        # Convert to format expected by frontend (same as NetCDF data)
+        result = {
+            'spectrogram': data['spectrogram'].tolist(),
+            'time': data['time'].tolist(),
+            'frequency': data['frequency'].tolist(),
+            'attributes': data['attributes'],
+            'shape': list(data['spectrogram'].shape),
+            'downsampling': {
+                'time_step': 1,
+                'freq_step': 1
+            }
+        }
+
+        return json.dumps(result)
+
+    def close(self):
+        """No-op for compatibility with SpectrogramFile"""
+        pass
+
+    def __repr__(self):
+        return f"DataPngSpectrogramFile(json={self.json_path.name}, wav={self.wav_path.name if self.wav_path else 'None'})"
+
+
 class SimpleDataset:
     """
     Simple dataset structure for APLOSE
 
     A dataset is a folder containing:
     - WAV files (audio recordings)
-    - NetCDF files (spectrograms, one per WAV file)
+    - Spectrograms in one of these formats:
+      - Data PNG + JSON files (preferred, compact format for Plotly display)
+      - NetCDF files (legacy format)
     - Optional: metadata.json with dataset-level information
     """
 
@@ -186,23 +385,93 @@ class SimpleDataset:
         self.name = self.folder.name
         self._spectrograms = None
         self._metadata = None
+        self._format = None  # 'data_png' or 'netcdf'
 
         if not self.folder.exists():
             raise ValueError(f"Dataset folder does not exist: {self.folder}")
 
     @property
-    def spectrograms(self) -> List[SpectrogramFile]:
+    def format(self) -> str:
+        """Get the format of spectrograms in this dataset"""
+        if self._format is None:
+            # Determine format by scanning
+            self._scan_spectrograms()
+        return self._format or 'unknown'
+
+    @property
+    def spectrograms(self) -> List:
         """Get list of spectrogram files in the dataset"""
         if self._spectrograms is None:
             self._spectrograms = self._scan_spectrograms()
         return self._spectrograms
 
-    def _scan_spectrograms(self) -> List[SpectrogramFile]:
-        """Scan folder for NetCDF spectrograms and match with WAV files"""
+    def _scan_spectrograms(self) -> List:
+        """Scan folder for spectrograms (data PNG or NetCDF) and match with WAV files"""
+
+        # First, try to find data PNG files (preferred format)
+        spectrograms = self._scan_data_png_files()
+        if spectrograms:
+            self._format = 'data_png'
+            logger.info(f"Found {len(spectrograms)} data PNG spectrograms in {self.folder}")
+            return spectrograms
+
+        # Fall back to NetCDF files
+        spectrograms = self._scan_netcdf_files()
+        if spectrograms:
+            self._format = 'netcdf'
+            logger.info(f"Found {len(spectrograms)} NetCDF spectrograms in {self.folder}")
+            return spectrograms
+
+        logger.warning(f"No spectrogram files found in {self.folder}")
+        return []
+
+    def _scan_data_png_files(self) -> List[DataPngSpectrogramFile]:
+        """Scan folder for data PNG + JSON spectrogram files"""
+        # Look for *_data.json files (our data PNG metadata format)
+        json_files = sorted(self.folder.glob("*_data.json"))
+
+        if not json_files:
+            return []
+
+        spectrograms = []
+        for json_path in json_files:
+            # Extract base filename and FFT size from pattern: filename_fft1024_data.json
+            stem = json_path.stem  # e.g., "filename_fft1024_data"
+            if stem.endswith('_data'):
+                base_stem = stem[:-5]  # Remove "_data" suffix
+
+                # Find corresponding WAV file
+                wav_path = self._find_wav_file_for_data_png(base_stem)
+
+                spec_file = DataPngSpectrogramFile(
+                    json_path,
+                    wav_path if wav_path and wav_path.exists() else None
+                )
+                spectrograms.append(spec_file)
+
+        return spectrograms
+
+    def _find_wav_file_for_data_png(self, base_stem: str) -> Optional[Path]:
+        """
+        Find WAV file for a data PNG spectrogram.
+        Base stem is like 'filename_fft1024', need to find 'filename.wav'
+        """
+        # Remove FFT suffix pattern (_fft followed by digits)
+        wav_stem = re.sub(r'_fft\d+$', '', base_stem)
+
+        # Try exact match
+        wav_path = self.folder / f"{wav_stem}.wav"
+        if wav_path.exists():
+            return wav_path
+
+        # Try case-insensitive
+        return self._find_wav_file(wav_stem)
+
+    def _scan_netcdf_files(self) -> List[SpectrogramFile]:
+        """Scan folder for NetCDF spectrogram files"""
         netcdf_files = sorted(self.folder.glob("*.nc"))
 
         if not netcdf_files:
-            logger.warning(f"No NetCDF files found in {self.folder}")
             return []
 
         spectrograms = []
@@ -358,13 +627,27 @@ class SimpleDataset:
         """
         result = []
         for spec in self.spectrograms:
-            info = {
-                'netcdf_path': str(spec.netcdf_path),
-                'netcdf_name': spec.netcdf_path.name,
-                'wav_path': str(spec.wav_path) if spec.wav_path else None,
-                'wav_name': spec.wav_path.name if spec.wav_path else None,
-                **spec.metadata
-            }
+            if isinstance(spec, DataPngSpectrogramFile):
+                info = {
+                    'json_path': str(spec.json_path),
+                    'json_name': spec.json_path.name,
+                    'png_path': str(spec.png_path) if spec.png_path else None,
+                    'png_name': spec.png_path.name if spec.png_path else None,
+                    'wav_path': str(spec.wav_path) if spec.wav_path else None,
+                    'wav_name': spec.wav_path.name if spec.wav_path else None,
+                    'format': 'data_png',
+                    **spec.metadata
+                }
+            else:
+                # NetCDF format
+                info = {
+                    'netcdf_path': str(spec.netcdf_path),
+                    'netcdf_name': spec.netcdf_path.name,
+                    'wav_path': str(spec.wav_path) if spec.wav_path else None,
+                    'wav_name': spec.wav_path.name if spec.wav_path else None,
+                    'format': 'netcdf',
+                    **spec.metadata
+                }
             result.append(info)
         return result
 

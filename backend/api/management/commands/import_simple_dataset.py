@@ -1,5 +1,7 @@
 """
-Django management command to import simple NetCDF datasets
+Django management command to import simple spectrogram datasets
+
+Supports both data PNG + JSON format (preferred) and NetCDF format.
 
 Usage:
     python manage.py import_simple_dataset <folder_path> [--name <dataset_name>] [--user <username>]
@@ -25,14 +27,14 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from backend.api.models import Dataset, SpectrogramAnalysis, Spectrogram
-from backend.utils.spectrogram.dataset import SimpleDataset
+from backend.utils.spectrogram.dataset import SimpleDataset, DataPngSpectrogramFile
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Import a simple NetCDF dataset (WAV + NetCDF pairs in one folder)'
+    help = 'Import a simple spectrogram dataset (WAV + PNG/JSON or NetCDF pairs in one folder)'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -110,14 +112,15 @@ class Command(BaseCommand):
         # Check if dataset has spectrograms
         if not simple_dataset.spectrograms:
             raise CommandError(
-                f"No NetCDF spectrograms found in {dataset_folder}\n"
-                "Please generate spectrograms first using:\n"
-                "  python -m backend.utils.spectrogram.cli generate <folder>\n"
+                f"No spectrograms found in {dataset_folder}\n"
+                "Please generate spectrograms first using the aplose_audio_processor:\n"
+                "  python -m aplose_audio_processor input/ output/ --generate-data-png\n"
                 "Or see documentation: GETTING_STARTED_SIMPLE_NETCDF.md"
             )
 
+        format_label = "data PNG" if simple_dataset.format == 'data_png' else "NetCDF"
         self.stdout.write(self.style.SUCCESS(
-            f"✓ Found {len(simple_dataset.spectrograms)} NetCDF spectrograms"
+            f"✓ Found {len(simple_dataset.spectrograms)} {format_label} spectrograms"
         ))
         self.stdout.write('')
 
@@ -217,7 +220,12 @@ class Command(BaseCommand):
 
         # Import spectrograms and link to their corresponding analyses
         from metadatax.data.models import FileFormat
-        img_format, _ = FileFormat.objects.get_or_create(name='nc')
+
+        # Determine file format based on dataset format
+        if simple_dataset.format == 'data_png':
+            img_format, _ = FileFormat.objects.get_or_create(name='png')
+        else:
+            img_format, _ = FileFormat.objects.get_or_create(name='nc')
 
         total_imported = 0
         total_skipped = 0
@@ -251,7 +259,12 @@ class Command(BaseCommand):
 
                     # Use base filename without FFT suffix for consistency
                     # For multi-FFT files, all FFT sizes share the same base filename
-                    filename = spec_file.netcdf_path.stem
+                    if isinstance(spec_file, DataPngSpectrogramFile):
+                        # For PNG: filename_fft1024_data.json -> filename_fft1024
+                        filename = spec_file.json_path.stem.replace('_data', '')
+                    else:
+                        # For NetCDF
+                        filename = spec_file.netcdf_path.stem
 
                     # Check if exists (need to check by filename, start, end to avoid duplicates)
                     existing = Spectrogram.objects.filter(
@@ -286,9 +299,15 @@ class Command(BaseCommand):
                         imported_count += 1
 
                 except Exception as e:
+                    # Get filename for error message
+                    if isinstance(spec_file, DataPngSpectrogramFile):
+                        file_name = spec_file.json_path.name
+                    else:
+                        file_name = spec_file.netcdf_path.name
+
                     self.stdout.write(
                         f"  [{i}/{len(spec_files)}] "
-                        f"{spec_file.netcdf_path.name} - "
+                        f"{file_name} - "
                         f"{self.style.ERROR(f'error: {str(e)}')}"
                     )
                     error_count += 1
