@@ -450,6 +450,11 @@ class Spectrogram(AbstractFile, TimeSegment, models.Model):
         """Read data PNG + JSON file and return data as dictionary."""
         try:
             from PIL import Image
+        except ImportError:
+            logger.error("Pillow is required for data PNG support. Install with: pip install Pillow")
+            return None
+
+        try:
 
             # Build path to JSON metadata file
             # self.filename is the base name (e.g., "recording_2024_01_01")

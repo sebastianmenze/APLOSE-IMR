@@ -22,6 +22,7 @@ whitenoise = "^6.9.0"
 xarray = "^2024.10.0"
 netcdf4 = "^1.6.5"
 soundfile = "^0.12.1"
+Pillow = "^10.0.0"
 graphene-django = "^3.2.3"
 graphene-django-pagination = {url = "https://github.com/instruct-br/graphene-django-pagination/archive/master.zip"}
 django-filter = ">=2"

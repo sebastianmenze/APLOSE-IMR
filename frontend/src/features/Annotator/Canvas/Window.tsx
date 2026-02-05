@@ -26,6 +26,7 @@ import {
   selectContrast,
   selectIsColormapReversed,
   selectViewMode,
+  setViewMode,
 } from '@/features/Annotator/VisualConfiguration';
 import { selectAnalysis } from '@/features/Annotator/Analysis';
 import { NetCDFSpectrogram } from '@/features/Annotator/Spectrogram';
@@ -82,6 +83,13 @@ export const AnnotatorCanvasWindow: React.FC = () => {
   const colormap = useAppSelector(selectColormap);
   const isColormapReversed = useAppSelector(selectIsColormapReversed);
   const viewMode = useAppSelector(selectViewMode);
+
+  // Auto-switch to Plotly view when interactive data is available (PNG or NetCDF)
+  useEffect(() => {
+    if (spectrogram?.isNetcdf && viewMode === 'png') {
+      dispatch(setViewMode('netcdf'));
+    }
+  }, [spectrogram?.isNetcdf]);
 
   // Show NetCDF view only if viewMode is 'netcdf' AND NetCDF data is available
   const showNetcdfView = viewMode === 'netcdf' && spectrogram?.isNetcdf;
