@@ -221,10 +221,16 @@ class AnnotationSpectrogramNode(BaseObjectType):
             )
         else:
             if not OSEKIT_AVAILABLE:
-                # Simple NetCDF structure - NetCDF file is directly in dataset folder
-                netcdf_path = analysis.get_netcdf_path()
-                relative_path = netcdf_path.relative_to(settings.DATASET_IMPORT_FOLDER)
-                spectrogram_path = str(relative_path).replace('\\', '/')
+                if self.format.name == 'png':
+                    # Data PNG format: path to the data PNG file
+                    # Filename is base name, actual file is base_fft{nfft}_data.png
+                    png_filename = f"{self.filename}_fft{analysis.nfft}_data.png"
+                    spectrogram_path = path.join(analysis.path, png_filename)
+                else:
+                    # Simple NetCDF structure - NetCDF file is directly in dataset folder
+                    netcdf_path = analysis.get_netcdf_path()
+                    relative_path = netcdf_path.relative_to(settings.DATASET_IMPORT_FOLDER)
+                    spectrogram_path = str(relative_path).replace('\\', '/')
             else:
                 spectro_dataset: SpectroDataset = analysis.get_osekit_spectro_dataset()
                 spectro_dataset_path = str(spectro_dataset.folder).split(

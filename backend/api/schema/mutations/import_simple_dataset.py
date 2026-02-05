@@ -8,6 +8,7 @@ This mutation imports datasets in the new simple format:
 """
 
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -204,10 +205,11 @@ class ImportSimpleDatasetMutation(Mutation):
                         logger.warning(f"Could not parse end time for {file_name}")
                         continue
 
-                    # Get filename for database
+                    # Use BASE filename (without _fft{N}) so the same Spectrogram
+                    # entry is shared across FFT sizes and linked to multiple analyses
                     if isinstance(spec_file, DataPngSpectrogramFile):
-                        # For PNG: filename_fft1024_data.json -> filename_fft1024
-                        filename = spec_file.json_path.stem.replace('_data', '')
+                        # filename_fft1024_data.json -> filename (strip _data and _fft{N})
+                        filename = re.sub(r'_fft\d+$', '', spec_file.json_path.stem.replace('_data', ''))
                     else:
                         filename = spec_file.netcdf_path.stem
 

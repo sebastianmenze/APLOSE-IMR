@@ -18,6 +18,7 @@ Examples:
 """
 
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -257,13 +258,12 @@ class Command(BaseCommand):
                     except (ValueError, AttributeError, KeyError):
                         raise ValueError(f"Could not parse end time")
 
-                    # Use base filename without FFT suffix for consistency
-                    # For multi-FFT files, all FFT sizes share the same base filename
+                    # Use BASE filename (without _fft{N}) so the same Spectrogram
+                    # entry is shared across FFT sizes and linked to multiple analyses
                     if isinstance(spec_file, DataPngSpectrogramFile):
-                        # For PNG: filename_fft1024_data.json -> filename_fft1024
-                        filename = spec_file.json_path.stem.replace('_data', '')
+                        # filename_fft1024_data.json -> filename (strip _data and _fft{N})
+                        filename = re.sub(r'_fft\d+$', '', spec_file.json_path.stem.replace('_data', ''))
                     else:
-                        # For NetCDF
                         filename = spec_file.netcdf_path.stem
 
                     # Check if exists (need to check by filename, start, end to avoid duplicates)

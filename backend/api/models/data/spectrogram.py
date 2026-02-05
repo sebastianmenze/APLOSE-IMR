@@ -452,8 +452,9 @@ class Spectrogram(AbstractFile, TimeSegment, models.Model):
             from PIL import Image
 
             # Build path to JSON metadata file
-            # filename format: base_fft1024 -> base_fft1024_data.json
-            json_filename = f"{self.filename}_data.json"
+            # self.filename is the base name (e.g., "recording_2024_01_01")
+            # The actual data file is named: base_fft{nfft}_data.json
+            json_filename = f"{self.filename}_fft{analysis.nfft}_data.json"
             json_path = Path(settings.DATASET_IMPORT_FOLDER) / analysis.path / json_filename
 
             if not json_path.exists():
