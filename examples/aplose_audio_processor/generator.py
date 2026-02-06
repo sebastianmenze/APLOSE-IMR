@@ -619,13 +619,16 @@ class AploseAudioProcessor:
         sample_rate: int,
         nfft: int,
         hop_length: int,
-        metadata: dict
+        metadata: dict,
+        max_freq_bins: int = 500,
+        max_time_bins: int = 1000
     ) -> tuple:
         """
         Create a data PNG (grayscale, no axes) with JSON metadata for Plotly display.
 
         The PNG stores normalized spectrogram values as 16-bit grayscale pixels.
         The JSON contains metadata needed to reconstruct actual dB values.
+        Data is resampled to max dimensions for faster loading.
 
         Args:
             wav_path: Path to WAV file (used to derive filenames).
@@ -636,22 +639,48 @@ class AploseAudioProcessor:
             nfft: FFT size used.
             hop_length: Hop length used.
             metadata: Additional metadata from audio processing.
+            max_freq_bins: Maximum frequency bins (default 500).
+            max_time_bins: Maximum time bins (default 1000).
 
         Returns:
             Tuple of (png_path, json_path).
         """
         from PIL import Image
+        from scipy import ndimage
+
+        # Store original dimensions
+        orig_n_freqs, orig_n_times = spec_data.shape
+
+        # Resample if needed to reduce file size and loading time
+        freq_step = max(1, orig_n_freqs // max_freq_bins)
+        time_step = max(1, orig_n_times // max_time_bins)
+
+        if freq_step > 1 or time_step > 1:
+            # Use scipy zoom for smoother resampling
+            zoom_freq = max_freq_bins / orig_n_freqs if orig_n_freqs > max_freq_bins else 1.0
+            zoom_time = max_time_bins / orig_n_times if orig_n_times > max_time_bins else 1.0
+            spec_data_resampled = ndimage.zoom(spec_data, (zoom_freq, zoom_time), order=1)
+
+            # Resample coordinate arrays
+            new_n_freqs, new_n_times = spec_data_resampled.shape
+            freqs_resampled = np.linspace(freqs[0], freqs[-1], new_n_freqs)
+            times_resampled = np.linspace(times[0], times[-1], new_n_times)
+        else:
+            spec_data_resampled = spec_data
+            freqs_resampled = freqs
+            times_resampled = times
+            new_n_freqs, new_n_times = orig_n_freqs, orig_n_times
 
         # Get data range for normalization
-        db_min = float(np.min(spec_data))
-        db_max = float(np.max(spec_data))
+        db_min = float(np.min(spec_data_resampled))
+        db_max = float(np.max(spec_data_resampled))
         db_range = db_max - db_min
 
         # Normalize to 0-65535 for 16-bit PNG
         if db_range > 0:
-            normalized = ((spec_data - db_min) / db_range * 65535).astype(np.uint16)
+            normalized = ((spec_data_resampled - db_min) / db_range * 65535).astype(np.uint16)
         else:
-            normalized = np.zeros_like(spec_data, dtype=np.uint16)
+            normalized = np.zeros_like(spec_data_resampled, dtype=np.uint16)
 
         # Create 16-bit grayscale image
         # Note: spec_data is (frequency, time), image should be (height, width)
@@ -672,7 +701,7 @@ class AploseAudioProcessor:
         # Parse datetime
         begin_dt, end_dt = self._parse_datetime(wav_stem, metadata['duration'])
 
-        # Build JSON metadata
+        # Build JSON metadata (using resampled dimensions)
         json_data = {
             'format_version': 1,
             'png_file': png_filename,
@@ -683,13 +712,17 @@ class AploseAudioProcessor:
                 'description': 'Pixel value 0 = db_min, 65535 = db_max'
             },
             'spectrogram': {
-                'shape': list(spec_data.shape),  # [n_frequencies, n_times]
+                'shape': [new_n_freqs, new_n_times],  # Resampled dimensions
+                'original_shape': [orig_n_freqs, orig_n_times],  # Original dimensions
                 'frequency_min': float(freqs[0]),
                 'frequency_max': float(freqs[-1]),
                 'time_min': float(times[0]),
                 'time_max': float(times[-1]),
-                'n_frequencies': len(freqs),
-                'n_times': len(times)
+                'n_frequencies': new_n_freqs,
+                'n_times': new_n_times,
+                'original_n_frequencies': orig_n_freqs,
+                'original_n_times': orig_n_times,
+                'resampled': freq_step > 1 or time_step > 1
             },
             'audio': {
                 'sample_rate': sample_rate,
