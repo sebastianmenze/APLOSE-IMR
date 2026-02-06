@@ -885,6 +885,11 @@ class AploseAudioProcessor:
             # Legacy mode: use db_ref as reference value
             spec_db = 10 * np.log10(spec_power / self.db_ref + 1e-10)
 
+        # Exclude DC bin (0 Hz) - start from first actual frequency bin (fs/nfft)
+        # This makes freqs[0] = fs/nfft instead of 0
+        spec_db = spec_db[1:, :]
+        freqs = freqs[1:]
+
         return spec_db, freqs, times
 
     def _parse_datetime(
