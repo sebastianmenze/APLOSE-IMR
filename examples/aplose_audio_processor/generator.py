@@ -52,7 +52,9 @@ class AploseAudioProcessor:
         png_colormap: str = 'viridis',
         png_dpi: int = 100,
         png_log_frequency: bool = True,
-        generate_data_png: bool = False
+        generate_data_png: bool = False,
+        data_png_max_freq_bins: int = 1000,
+        data_png_max_time_bins: int = 1000
     ):
         """
         Initialize the APLOSE audio processor.
@@ -78,6 +80,8 @@ class AploseAudioProcessor:
             png_log_frequency: If True (default), render visual PNG with log frequency axis.
             generate_data_png: If True, generate data PNG + JSON for Plotly display.
                               This is a compact format that allows interactive visualization.
+            data_png_max_freq_bins: Maximum frequency bins for data PNG resampling (default: 1000).
+            data_png_max_time_bins: Maximum time bins for data PNG resampling (default: 1000).
         """
         # Handle single or multiple FFT sizes
         if isinstance(fft_sizes, int):
@@ -98,6 +102,8 @@ class AploseAudioProcessor:
         self.png_dpi = png_dpi
         self.png_log_frequency = png_log_frequency
         self.generate_data_png = generate_data_png
+        self.data_png_max_freq_bins = data_png_max_freq_bins
+        self.data_png_max_time_bins = data_png_max_time_bins
 
         # Initialize audio processor
         self.audio_processor = AudioProcessor(
@@ -782,7 +788,9 @@ class AploseAudioProcessor:
             # Create data PNG with metadata
             png_path, json_path = self._create_data_png_with_metadata(
                 wav_path, spec_data, freqs, times,
-                sample_rate, nfft, hop_length, metadata
+                sample_rate, nfft, hop_length, metadata,
+                max_freq_bins=self.data_png_max_freq_bins,
+                max_time_bins=self.data_png_max_time_bins
             )
             results.append((png_path, json_path))
 

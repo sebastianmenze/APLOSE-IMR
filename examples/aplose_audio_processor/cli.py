@@ -166,6 +166,18 @@ Examples:
         help='Generate data PNG + JSON files for Plotly interactive display. '
              'Creates 16-bit grayscale PNG with JSON metadata for each FFT size.'
     )
+    parser.add_argument(
+        '--data-png-max-freq',
+        type=int,
+        default=1000,
+        help='Maximum frequency bins for data PNG (default: 1000). Larger values give more detail but slower loading.'
+    )
+    parser.add_argument(
+        '--data-png-max-time',
+        type=int,
+        default=1000,
+        help='Maximum time bins for data PNG (default: 1000). Larger values give more detail but slower loading.'
+    )
 
     # Other options
     parser.add_argument(
@@ -222,6 +234,7 @@ Examples:
         print(f"  PNG files will be generated for all {len(args.fft_sizes)} FFT size(s)")
     if args.generate_data_png:
         print(f"  Data PNG export: enabled (16-bit grayscale + JSON metadata)")
+        print(f"  Data PNG max dimensions: {args.data_png_max_freq} freq x {args.data_png_max_time} time bins")
         print(f"  Data PNG files will be generated for all {len(args.fft_sizes)} FFT size(s)")
 
     processor = AploseAudioProcessor(
@@ -242,7 +255,9 @@ Examples:
         png_colormap=args.png_colormap,
         png_dpi=args.png_dpi,
         png_log_frequency=not args.png_linear_frequency,
-        generate_data_png=args.generate_data_png
+        generate_data_png=args.generate_data_png,
+        data_png_max_freq_bins=args.data_png_max_freq,
+        data_png_max_time_bins=args.data_png_max_time
     )
 
     # Process files
