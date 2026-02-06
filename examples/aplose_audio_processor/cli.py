@@ -22,11 +22,11 @@ def parse_fft_sizes(fft_str: str) -> list:
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        description='Generate APLOSE-compatible NetCDF files from audio files.',
+        description='Generate APLOSE-compatible spectrogram files from audio files.',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Process folder with default settings
+  # Process folder with default settings (generates data PNG + JSON)
   python -m aplose_audio_processor.cli -i audio_files/ -o output/
 
   # Resample to 48kHz and create 60-second snippets
@@ -40,6 +40,10 @@ Examples:
   # Create 1-minute snippets with 10-second overlap
   python -m aplose_audio_processor.cli -i audio_files/ -o output/ \\
     --snippet-duration 60 --overlap 10
+
+  # Custom datetime format (no underscores)
+  python -m aplose_audio_processor.cli -i audio_files/ -o output/ \\
+    --datetime-format '%Y%m%d%H%M%S'
         """
     )
 
@@ -52,7 +56,7 @@ Examples:
     parser.add_argument(
         '-o', '--output',
         required=True,
-        help='Output folder for processed WAV and NetCDF files'
+        help='Output folder for processed WAV and spectrogram files'
     )
 
     # Audio processing options
@@ -118,53 +122,12 @@ Examples:
         action='store_true',
         help='Normalize audio to [-1, 1] before computing spectrogram'
     )
-    parser.add_argument(
-        '--compression-level',
-        type=int,
-        default=4,
-        choices=range(0, 10),
-        metavar='0-9',
-        help='NetCDF zlib compression level 0-9 (0=none, 9=max). Default: 4'
-    )
 
-    # NetCDF export options
+    # Data PNG export options (enabled by default)
     parser.add_argument(
-        '--generate-netcdf',
+        '--no-data-png',
         action='store_true',
-        help='Generate NetCDF spectrogram files (disabled by default)'
-    )
-
-    # PNG export options
-    parser.add_argument(
-        '--generate-png',
-        action='store_true',
-        help='Also generate PNG spectrogram images for fast preview'
-    )
-    parser.add_argument(
-        '--png-colormap',
-        type=str,
-        default='viridis',
-        choices=['viridis', 'plasma', 'inferno', 'magma', 'hot', 'jet', 'gray'],
-        help='Colormap for PNG images (default: viridis)'
-    )
-    parser.add_argument(
-        '--png-dpi',
-        type=int,
-        default=100,
-        help='DPI for PNG images (default: 100)'
-    )
-    parser.add_argument(
-        '--png-linear-frequency',
-        action='store_true',
-        help='Use linear frequency scale for PNG images (default: log scale)'
-    )
-
-    # Data PNG export options (for Plotly interactive display)
-    parser.add_argument(
-        '--generate-data-png',
-        action='store_true',
-        help='Generate data PNG + JSON files for Plotly interactive display. '
-             'Creates 16-bit grayscale PNG with JSON metadata for each FFT size.'
+        help='Disable data PNG + JSON generation (enabled by default)'
     )
     parser.add_argument(
         '--data-png-max-freq',
@@ -192,7 +155,8 @@ Examples:
         '--datetime-format',
         type=str,
         default='%Y_%m_%d_%H_%M_%S',
-        help='strptime format for parsing datetime from filenames (default: %%Y_%%m_%%d_%%H_%%M_%%S)'
+        help='strptime format for parsing datetime from filenames (default: %%Y_%%m_%%d_%%H_%%M_%%S). '
+             'Supports formats without separators like %%Y%%m%%d%%H%%M%%S'
     )
     parser.add_argument(
         '--no-preserve-timestamps',
@@ -217,6 +181,9 @@ Examples:
     # Parse extensions
     extensions = [ext.strip() for ext in args.extensions.split(',')]
 
+    # Determine if data PNG generation is enabled
+    generate_data_png = not args.no_data_png
+
     # Create processor
     print("Initializing APLOSE Audio Processor...")
     print(f"  FFT sizes: {args.fft_sizes}")
@@ -233,18 +200,14 @@ Examples:
         print(f"  dB full scale: {args.db_fullscale} dB re 1 µPa")
     else:
         print(f"  dB reference: {args.db_ref}")
-    print(f"  Compression level: {args.compression_level}")
-    if args.generate_netcdf:
-        print("  NetCDF export: enabled")
-    if args.generate_png:
-        freq_scale = 'linear' if args.png_linear_frequency else 'log'
-        print(f"  PNG export: enabled (colormap: {args.png_colormap}, dpi: {args.png_dpi}, freq scale: {freq_scale})")
-        print(f"  PNG files will be generated for all {len(args.fft_sizes)} FFT size(s)")
-    if args.generate_data_png:
+    print(f"  Datetime format: {args.datetime_format}")
+    if generate_data_png:
         print(f"  Data PNG export: enabled (16-bit grayscale + JSON metadata)")
         print(f"  Data PNG max dimensions: {args.data_png_max_freq} freq x {args.data_png_max_time} time bins")
         print(f"  Data PNG frequency scale: {args.data_png_freq_scale}")
         print(f"  Data PNG files will be generated for all {len(args.fft_sizes)} FFT size(s)")
+    else:
+        print("  Data PNG export: disabled")
 
     processor = AploseAudioProcessor(
         fft_sizes=args.fft_sizes,
@@ -253,18 +216,12 @@ Examples:
         db_ref=args.db_ref,
         db_fullscale=args.db_fullscale,
         normalize_audio=args.normalize_audio,
-        compression_level=args.compression_level,
         datetime_format=args.datetime_format,
         target_sample_rate=args.sample_rate,
         snippet_duration=args.snippet_duration,
         snippet_overlap=args.overlap,
         filename_prefix=args.filename_prefix,
-        generate_netcdf=args.generate_netcdf,
-        generate_png=args.generate_png,
-        png_colormap=args.png_colormap,
-        png_dpi=args.png_dpi,
-        png_log_frequency=not args.png_linear_frequency,
-        generate_data_png=args.generate_data_png,
+        generate_data_png=generate_data_png,
         data_png_max_freq_bins=args.data_png_max_freq,
         data_png_max_time_bins=args.data_png_max_time,
         data_png_freq_scale=args.data_png_freq_scale
@@ -290,8 +247,7 @@ Examples:
 
         print(f"\nSuccess! Output written to: {args.output}")
         print(f"  WAV files: {len(results['wav_files'])}")
-        print(f"  NetCDF files: {len(results['netcdf_files'])}")
-        if args.generate_png:
+        if generate_data_png:
             print(f"  PNG files: {len(results['png_files'])}")
 
         return 0
