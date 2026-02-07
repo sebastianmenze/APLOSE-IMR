@@ -16,10 +16,7 @@ export const AnalysisSelect: React.FC = () => {
 
   const options = useMemo(() => {
     return allAnalysis?.map(a => {
-      let label = `nfft: ${ a!.fft.nfft }`;
-      label += ` | winsize: ${ a!.fft.windowSize }`
-      label += ` | overlap: ${ a!.fft.overlap }`
-      label += ` | scale: ${ a!.legacyConfiguration?.scaleName ?? 'Default' }`
+      const label = `nfft: ${ a!.fft.nfft }`;
       return { value: a!.id, label }
     }) ?? []
   }, [ allAnalysis ]);
