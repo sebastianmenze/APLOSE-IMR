@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Optional, Union, List, Dict
 from datetime import datetime, timedelta
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import partial
 import numpy as np
 from scipy import signal
@@ -199,9 +199,9 @@ class AploseAudioProcessor:
         audio_files_sorted = sorted(audio_files)
 
         if self.num_workers > 1 and len(audio_files_sorted) > 1:
-            # Use multiprocessing for parallel processing
+            # Use multithreading for parallel processing
             print(f"Using {self.num_workers} parallel workers")
-            with ProcessPoolExecutor(max_workers=self.num_workers) as executor:
+            with ThreadPoolExecutor(max_workers=self.num_workers) as executor:
                 futures = {
                     executor.submit(
                         self._process_single_audio_file,
