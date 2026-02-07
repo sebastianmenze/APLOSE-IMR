@@ -25,6 +25,7 @@ const COLORSCALES = [
   'Greens',
   'Blues',
   'Greys',
+  'Greys_r',
   'YlGnBu',
   'YlOrRd',
 ];
