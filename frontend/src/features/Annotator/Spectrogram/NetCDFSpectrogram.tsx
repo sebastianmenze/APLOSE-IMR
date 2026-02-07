@@ -11,6 +11,7 @@ import { selectFocusConfidence } from '@/features/Annotator/Confidence';
 import { selectIsDrawingEnabled } from '@/features/Annotator/UX';
 import { useAudio } from '@/features/Audio';
 import { focusAnnotation } from '@/features/Annotator/Annotation/slice';
+import { selectFrequencyScaleType } from '@/features/Annotator/VisualConfiguration';
 
 interface NetCDFData {
   spectrogram: number[][];
@@ -51,8 +52,8 @@ export const NetCDFSpectrogram: React.FC = () => {
   const [zmin, setZmin] = useState<number>(0);
   const [zmax, setZmax] = useState<number>(0);
 
-  // Always use logarithmic frequency scale for better audio visualization
-  const yAxisScale = 'log';
+  // Y-axis scale from Redux state
+  const yAxisScale = useAppSelector(selectFrequencyScaleType);
 
   // Plot reference for managing dragmode
   const plotRef = useRef<any>(null);

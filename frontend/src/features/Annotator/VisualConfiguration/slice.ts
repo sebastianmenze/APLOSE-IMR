@@ -5,11 +5,14 @@ import { Analysis, setAnalysis } from '@/features/Annotator/Analysis/slice';
 import type { GetAnnotationTaskQueryVariables } from '@/api/annotation-task/annotation-task.generated';
 
 
+export type FrequencyScaleType = 'linear' | 'log';
+
 type VisualConfigurationState = {
   brightness: number; // 0-100
   contrast: number; // 0-100
   colormap?: Colormap;
   isColormapReversed: boolean;
+  frequencyScaleType: FrequencyScaleType; // 'linear' or 'log' for y-axis
 
   _campaignDefaultColormap?: Colormap
   _campaignDefaultReversedColormap?: boolean
@@ -21,6 +24,7 @@ const initialState: VisualConfigurationState = {
   contrast: 50,
   colormap: undefined,
   isColormapReversed: false,
+  frequencyScaleType: 'log', // Default to log scale
 
   _campaignDefaultColormap: undefined,
   _campaignDefaultReversedColormap: undefined,
@@ -49,6 +53,9 @@ export const AnnotatorVisualConfigurationSlice = createSlice({
     },
     revertColormap: (state) => {
       state.isColormapReversed = !state.isColormapReversed;
+    },
+    setFrequencyScaleType: (state, action: { payload: FrequencyScaleType }) => {
+      state.frequencyScaleType = action.payload;
     },
   },
   extraReducers: builder => {
@@ -83,6 +90,7 @@ export const AnnotatorVisualConfigurationSlice = createSlice({
     selectContrast: state => state.contrast,
     selectColormap: state => state.colormap,
     selectIsColormapReversed: state => state.isColormapReversed,
+    selectFrequencyScaleType: state => state.frequencyScaleType,
   },
 })
 
@@ -91,5 +99,6 @@ export const {
   setContrast, resetContrast,
   setColormap,
   revertColormap,
+  setFrequencyScaleType,
 } = AnnotatorVisualConfigurationSlice.actions
 
