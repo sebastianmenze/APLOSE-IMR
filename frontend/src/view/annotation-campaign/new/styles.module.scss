@@ -3,9 +3,10 @@
   flex-direction: column;
   align-items: center;
   gap: 4rem;
-  color: var(--ion-color-dark);
+  color: #e0e0e0;
   font-family: var(--ion-font-family), sans-serif;
   padding: 0 2rem 1rem;
+  background-color: #000;
 
   height: 100%;
   overflow: auto;
@@ -23,12 +24,20 @@
   }
 
   h2 {
-    background: white;
+    background: #000;
+    color: #fff;
     position: sticky;
     top: 0;
     z-index: 3;
     display: grid;
     justify-items: center;
+  }
+
+  input[type="text"],
+  input[type="url"],
+  input[type="date"],
+  input:not([type="checkbox"]) {
+    color: #fff;
   }
 
   .checkbox {
