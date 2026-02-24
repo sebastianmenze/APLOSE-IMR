@@ -669,75 +669,96 @@ class AploseAudioProcessor:
         """
         parsed_dt = None
 
-        # Convert datetime format to regex pattern
-        regex_pattern = self._datetime_format_to_regex(self.datetime_format)
+        # List of formats to try (user-provided format first, then common formats)
+        # Always include %Y_%m_%d_%H_%M_%S since that's the output format from audio_processor
+        formats_to_try = []
+        if self.datetime_format:
+            formats_to_try.append(self.datetime_format)
+        formats_to_try.extend([
+            '%Y_%m_%d_%H_%M_%S',  # Output format from audio_processor
+            '%Y%m%d_%H%M%S',
+            '%Y%m%d%H%M%S',
+            '%Y-%m-%d_%H-%M-%S',
+        ])
+        # Remove duplicates while preserving order
+        seen = set()
+        formats_to_try = [x for x in formats_to_try if not (x in seen or seen.add(x))]
 
-        try:
-            # First try: parse the entire filename
+        for datetime_format in formats_to_try:
+            if parsed_dt:
+                break
+
+            # Convert datetime format to regex pattern
+            regex_pattern = self._datetime_format_to_regex(datetime_format)
+
             try:
-                parsed_dt = datetime.strptime(filename, self.datetime_format)
-            except ValueError:
-                pass
+                # First try: parse the entire filename
+                try:
+                    parsed_dt = datetime.strptime(filename, datetime_format)
+                    continue
+                except ValueError:
+                    pass
 
-            # Second try: search for pattern anywhere in filename using regex
-            if not parsed_dt:
-                match = re.search(regex_pattern, filename)
-                if match:
-                    matched_str = match.group(0)
-                    try:
-                        parsed_dt = datetime.strptime(matched_str, self.datetime_format)
-                    except ValueError:
-                        pass
-
-            # Third try: for formats with separators, try splitting and recombining
-            if not parsed_dt and '_' in self.datetime_format:
-                parts = filename.split('_')
-                for i in range(len(parts)):
-                    for j in range(i+1, min(i+7, len(parts)+1)):
-                        candidate = '_'.join(parts[i:j])
+                # Second try: search for pattern anywhere in filename using regex
+                if not parsed_dt:
+                    match = re.search(regex_pattern, filename)
+                    if match:
+                        matched_str = match.group(0)
                         try:
-                            parsed_dt = datetime.strptime(candidate, self.datetime_format)
+                            parsed_dt = datetime.strptime(matched_str, datetime_format)
+                            continue
+                        except ValueError:
+                            pass
+
+                # Third try: for formats with separators, try splitting and recombining
+                if not parsed_dt and '_' in datetime_format:
+                    parts = filename.split('_')
+                    for i in range(len(parts)):
+                        for j in range(i+1, min(i+7, len(parts)+1)):
+                            candidate = '_'.join(parts[i:j])
+                            try:
+                                parsed_dt = datetime.strptime(candidate, datetime_format)
+                                break
+                            except ValueError:
+                                continue
+                        if parsed_dt:
+                            break
+
+                # Fourth try: extract all digit sequences and try common patterns
+                if not parsed_dt:
+                    # Find all sequences of digits in the filename
+                    digit_sequences = re.findall(r'\d+', filename)
+
+                    # Try concatenating adjacent sequences to form datetime
+                    for i in range(len(digit_sequences)):
+                        # Try single sequence
+                        seq = digit_sequences[i]
+                        try:
+                            parsed_dt = datetime.strptime(seq, datetime_format)
                             break
                         except ValueError:
-                            continue
-                    if parsed_dt:
-                        break
+                            pass
 
-            # Fourth try: extract all digit sequences and try common patterns
-            if not parsed_dt:
-                # Find all sequences of digits in the filename
-                digit_sequences = re.findall(r'\d+', filename)
-
-                # Try concatenating adjacent sequences to form datetime
-                for i in range(len(digit_sequences)):
-                    # Try single sequence
-                    seq = digit_sequences[i]
-                    try:
-                        parsed_dt = datetime.strptime(seq, self.datetime_format)
-                        break
-                    except ValueError:
-                        pass
-
-                    # Try concatenating with next sequences
-                    for j in range(i+1, min(i+6, len(digit_sequences)+1)):
-                        combined = ''.join(digit_sequences[i:j])
-                        try:
-                            parsed_dt = datetime.strptime(combined, self.datetime_format)
+                        # Try concatenating with next sequences
+                        for j in range(i+1, min(i+6, len(digit_sequences)+1)):
+                            combined = ''.join(digit_sequences[i:j])
+                            try:
+                                parsed_dt = datetime.strptime(combined, datetime_format)
+                                break
+                            except ValueError:
+                                continue
+                        if parsed_dt:
                             break
-                        except ValueError:
-                            continue
-                    if parsed_dt:
-                        break
 
-            if not parsed_dt:
-                raise ValueError("Could not parse datetime")
+            except (ValueError, IndexError):
+                continue
 
-            begin_dt = parsed_dt
-
-        except (ValueError, IndexError):
+        if not parsed_dt:
             # Fallback to current time if parsing fails
-            print(f"  Warning: Could not parse datetime from '{filename}' using format '{self.datetime_format}', using current time")
-            begin_dt = datetime.now()
+            print(f"  Warning: Could not parse datetime from '{filename}' using any format, using current time")
+            parsed_dt = datetime.now()
+
+        begin_dt = parsed_dt
 
         # Calculate end datetime
         end_dt = begin_dt + timedelta(seconds=duration)
