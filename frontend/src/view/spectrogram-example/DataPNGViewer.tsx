@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import Plot from 'react-plotly.js';
 import { IonSpinner } from '@ionic/react';
 import { useAudio } from '@/features/Audio/context';
@@ -98,6 +98,9 @@ export const DataPNGViewer: React.FC<DataPNGViewerProps> = ({
   const [spectrogramData, setSpectrogramData] = useState<number[][] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Plot reference for managing layout updates
+  const plotRef = useRef<any>(null);
 
   // Use the global audio context
   const audio = useAudio();
@@ -271,56 +274,68 @@ export const DataPNGViewer: React.FC<DataPNGViewerProps> = ({
     ];
   }, [spectrogramData, frequencies, times, colorscale, effectiveZmin, effectiveZmax]);
 
-  // Layout with playback indicator line
+  // Layout with playback indicator line - matching annotation page patterns
   const layout = useMemo(() => {
     if (!metadata) return {};
+
+    const { frequency_min, frequency_max, time_min, time_max } = metadata.spectrogram;
 
     const shapes: any[] = [];
 
     // Playback indicator line - animated with audio time
     if (audio.time > 0) {
       shapes.push({
-        type: 'line',
+        type: 'line' as const,
         x0: audio.time,
         x1: audio.time,
-        y0: metadata.spectrogram.frequency_min,
-        y1: metadata.spectrogram.frequency_max,
+        y0: frequency_min,
+        y1: frequency_max,
+        yref: 'y' as const,
         line: { color: '#ff0000', width: 2 },
-        layer: 'above',
+        layer: 'above' as const,
       });
     }
 
+    // Y-axis configuration based on scale type (same approach as annotation page)
+    const yAxisConfig = yAxisScale === 'log'
+      ? {
+          type: 'log' as const,
+          // For log axis, range is [log10(min), log10(max)]
+          range: [Math.log10(Math.max(1, frequency_min)), Math.log10(frequency_max)],
+          autorange: false,
+          fixedrange: false, // Allow zooming but constrain in onRelayout
+        }
+      : {
+          type: 'linear' as const,
+          range: [frequency_min, frequency_max],
+          autorange: false,
+          fixedrange: false, // Allow zooming but constrain in onRelayout
+        };
+
     return {
-      margin: { l: 70, r: 20, t: 20, b: 50 },
+      margin: { l: 60, r: 20, t: 10, b: 40 },
       xaxis: {
-        title: { text: 'Time (s)', font: { color: '#aaa' } },
+        title: { text: 'Time (s)' },
         showgrid: true,
         gridcolor: '#333',
         zeroline: false,
         tickfont: { color: '#aaa' },
-        range: [metadata.spectrogram.time_min, metadata.spectrogram.time_max],
+        range: [time_min, time_max],
         autorange: false,
-        constrain: 'domain' as const,
-        constraintoward: 'center' as const,
+        fixedrange: false,
       },
       yaxis: {
-        title: { text: 'Frequency (Hz)', font: { color: '#aaa' } },
+        title: { text: 'Frequency (Hz)' },
         showgrid: true,
         gridcolor: '#333',
         zeroline: false,
         tickfont: { color: '#aaa' },
-        type: yAxisScale,
-        range: yAxisScale === 'log'
-          ? [Math.log10(Math.max(1, metadata.spectrogram.frequency_min)), Math.log10(metadata.spectrogram.frequency_max)]
-          : [metadata.spectrogram.frequency_min, metadata.spectrogram.frequency_max],
-        autorange: false,
-        constrain: 'domain' as const,
-        constraintoward: 'center' as const,
+        ...yAxisConfig,
       },
       shapes,
       hovermode: 'closest' as const,
-      plot_bgcolor: '#1a1a1a',
-      paper_bgcolor: '#1a1a1a',
+      plot_bgcolor: '#000',
+      paper_bgcolor: '#000',
       font: { color: '#fff' },
     };
   }, [metadata, yAxisScale, audio.time]);
@@ -340,6 +355,81 @@ export const DataPNGViewer: React.FC<DataPNGViewerProps> = ({
       audio.seek(event.points[0].x as number);
     }
   }, [audio]);
+
+  // Enforce zoom constraints - same pattern as annotation page
+  const onRelayout = useCallback((event: any) => {
+    if (!plotRef.current || !metadata) return;
+
+    const plotlyDiv = plotRef.current.el;
+    if (!plotlyDiv) return;
+
+    const Plotly = (window as any).Plotly;
+    if (!Plotly) return;
+
+    const updates: any = {};
+    let needsUpdate = false;
+
+    const { frequency_min, frequency_max, time_min, time_max } = metadata.spectrogram;
+
+    // Check if x-axis range was modified (zoom/pan)
+    if (event && (event['xaxis.range[0]'] !== undefined || event['xaxis.range'] !== undefined)) {
+      const currentXAxis = plotlyDiv.layout?.xaxis;
+      if (currentXAxis) {
+        const currentRange = currentXAxis.range || [time_min, time_max];
+        const newRange = [
+          Math.max(time_min, Math.min(time_max, currentRange[0])),
+          Math.max(time_min, Math.min(time_max, currentRange[1]))
+        ];
+
+        if (newRange[0] !== currentRange[0] || newRange[1] !== currentRange[1]) {
+          updates['xaxis.range'] = newRange;
+          needsUpdate = true;
+        }
+      }
+    }
+
+    // Check if y-axis range was modified (zoom/pan)
+    if (event && (event['yaxis.range[0]'] !== undefined || event['yaxis.range'] !== undefined)) {
+      const currentYAxis = plotlyDiv.layout?.yaxis;
+      if (currentYAxis?.type === 'log') {
+        // In log mode, range is in log10 values
+        const minLogFreq = Math.log10(Math.max(1, frequency_min));
+        const maxLogFreq = Math.log10(frequency_max);
+
+        const currentRange = currentYAxis.range || [minLogFreq, maxLogFreq];
+        const newRange = [
+          Math.max(minLogFreq, Math.min(maxLogFreq, currentRange[0])),
+          Math.max(minLogFreq, Math.min(maxLogFreq, currentRange[1]))
+        ];
+
+        if (newRange[0] !== currentRange[0] || newRange[1] !== currentRange[1]) {
+          updates['yaxis.range'] = newRange;
+          needsUpdate = true;
+        }
+      } else {
+        // Linear mode
+        const currentRange = currentYAxis?.range || [frequency_min, frequency_max];
+        const newRange = [
+          Math.max(frequency_min, Math.min(frequency_max, currentRange[0])),
+          Math.max(frequency_min, Math.min(frequency_max, currentRange[1]))
+        ];
+
+        if (newRange[0] !== currentRange[0] || newRange[1] !== currentRange[1]) {
+          updates['yaxis.range'] = newRange;
+          needsUpdate = true;
+        }
+      }
+    }
+
+    // Apply updates if needed
+    if (needsUpdate) {
+      try {
+        Plotly.relayout(plotlyDiv, updates);
+      } catch (e) {
+        console.error('Error updating plot layout:', e);
+      }
+    }
+  }, [metadata]);
 
   if (loading) {
     return (
@@ -441,11 +531,13 @@ export const DataPNGViewer: React.FC<DataPNGViewerProps> = ({
       {/* Spectrogram Plot */}
       <div className={styles.plotArea}>
         <Plot
+          ref={plotRef}
           data={plotData}
           layout={layout}
           config={config}
           style={{ width: '100%', height: '100%' }}
           onClick={handlePlotClick}
+          onRelayout={onRelayout}
           useResizeHandler
         />
       </div>
