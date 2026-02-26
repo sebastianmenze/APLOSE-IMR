@@ -1,9 +1,10 @@
 .documentationPage {
-  min-height: 100vh;
+  height: 100%;
   background: #121212;
   color: #e0e0e0;
   padding: 2rem;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .container {
