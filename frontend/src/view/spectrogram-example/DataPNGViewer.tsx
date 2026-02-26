@@ -114,7 +114,7 @@ export const DataPNGViewer: React.FC<DataPNGViewerProps> = ({
         setError(null);
 
         // Load JSON metadata
-        const jsonUrl = `${basePath}/${jsonPath}`;
+        const jsonUrl = `${basePath}${encodeURIComponent(jsonPath)}`;
         console.log('Fetching metadata from:', jsonUrl);
         const jsonResponse = await fetch(jsonUrl);
         if (!jsonResponse.ok) {
@@ -124,7 +124,7 @@ export const DataPNGViewer: React.FC<DataPNGViewerProps> = ({
         setMetadata(meta);
 
         // Load PNG and decode
-        const pngUrl = `${basePath}/${meta.png_file}`;
+        const pngUrl = `${basePath}${encodeURIComponent(meta.png_file)}`;
         console.log('Fetching PNG from:', pngUrl);
         const pngData = await decodePNG(pngUrl, meta);
         setSpectrogramData(pngData);
@@ -368,7 +368,9 @@ export const DataPNGViewer: React.FC<DataPNGViewerProps> = ({
     );
   }
 
-  const audioUrl = wavFile ? `${basePath}/${wavFile}` : `${basePath}/${metadata.audio.filename}`;
+  const audioUrl = wavFile
+    ? `${basePath}${encodeURIComponent(wavFile)}`
+    : `${basePath}${encodeURIComponent(metadata.audio.filename)}`;
 
   return (
     <div className={styles.viewerContainer}>

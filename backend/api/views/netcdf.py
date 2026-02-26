@@ -367,7 +367,7 @@ class NetCDFViewSet(ViewSet):
 
             return JsonResponse({
                 'recordings': recordings,
-                'basePath': '/api/netcdf/example-file',
+                'basePath': '/api/netcdf/example-file?file=',
             })
 
         except Exception as e:
@@ -377,17 +377,18 @@ class NetCDFViewSet(ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    @action(detail=False, methods=['get'], url_path='example-file/(?P<filename>.+)')
-    def serve_example_file(self, request, filename=None):
+    @action(detail=False, methods=['get'], url_path='example-file')
+    def serve_example_file(self, request):
         """
         Serve a file from the example dataset folder.
 
-        URL parameters:
-            filename: Name of the file to serve (e.g., spectrogram.png)
+        Query parameters:
+            file: Name of the file to serve (e.g., spectrogram.png)
 
         Returns:
             FileResponse with the requested file
         """
+        filename = request.query_params.get('file')
         if not filename:
             return Response(
                 {'error': 'Filename is required'},
