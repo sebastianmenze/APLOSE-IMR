@@ -433,3 +433,171 @@ class NetCDFViewSet(ViewSet):
                 {'error': f'Failed to serve file: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @action(detail=False, methods=['get'], url_path='list-sound-library')
+    def list_sound_library(self, request):
+        """
+        List available audio files in the sound library folder.
+        Groups files by prefix (e.g., "soi_aural" from "soi_aural_2025_12_23_12_03_03.wav").
+
+        Returns:
+            JSON response with list of available sound files:
+            {
+                "files": [
+                    {
+                        "prefix": "soi_aural",
+                        "filename": "soi_aural_2025_12_23_12_03_03.wav",
+                        "analyses": [
+                            {"fft": 4096, "json": "file_fft4096_data.json", "png": "file_fft4096_data.png"},
+                        ]
+                    }
+                ],
+                "basePath": "/api/netcdf/sound-library-file?file="
+            }
+        """
+        import re
+        try:
+            # Get the sound library folder path
+            datawork_dir = Path(settings.DATAWORK_FOLDER if hasattr(settings, 'DATAWORK_FOLDER') else '/opt/datawork')
+            library_dir = datawork_dir / 'dataset' / 'sound_library'
+
+            if not library_dir.exists():
+                return JsonResponse({
+                    'files': [],
+                    'basePath': '',
+                    'message': 'Sound library folder not found. Place files in volumes/datawork/dataset/sound_library/'
+                })
+
+            # Find all JSON files (metadata files)
+            json_files = list(library_dir.glob('*_data.json'))
+
+            # Group by WAV file (extract prefix from filename)
+            files_dict = {}
+            fft_pattern = re.compile(r'(.+)_fft(\d+)_data\.json$')
+
+            for json_file in sorted(json_files):
+                match = fft_pattern.match(json_file.name)
+                if not match:
+                    continue
+
+                base_name = match.group(1)
+                fft_size = int(match.group(2))
+
+                # Read JSON to get metadata
+                try:
+                    with open(json_file, 'r') as f:
+                        metadata = json.load(f)
+
+                    png_file = metadata.get('png_file', '')
+                    wav_file = metadata.get('audio', {}).get('filename', '')
+
+                    # Extract prefix from wav filename (everything before the date pattern)
+                    # Pattern: prefix_YYYY_MM_DD_HH_MM_SS.wav
+                    prefix_match = re.match(r'^(.+?)_\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_\d{2}\.wav$', wav_file)
+                    if prefix_match:
+                        prefix = prefix_match.group(1)
+                    else:
+                        # Fallback: use filename without extension
+                        prefix = os.path.splitext(wav_file)[0] if wav_file else base_name
+
+                    # Check if PNG exists
+                    png_path = library_dir / png_file if png_file else None
+                    png_exists = png_path and png_path.exists()
+
+                    file_key = wav_file or base_name
+
+                    if file_key not in files_dict:
+                        files_dict[file_key] = {
+                            'prefix': prefix,
+                            'filename': wav_file,
+                            'baseName': base_name,
+                            'analyses': []
+                        }
+
+                    files_dict[file_key]['analyses'].append({
+                        'fft': fft_size,
+                        'json': json_file.name,
+                        'png': png_file if png_exists else None,
+                    })
+
+                except (json.JSONDecodeError, KeyError) as e:
+                    logger.warning(f"Could not parse JSON file {json_file}: {e}")
+                    continue
+
+            # Sort analyses by FFT size within each file
+            files = []
+            for file_data in files_dict.values():
+                file_data['analyses'].sort(key=lambda x: x['fft'])
+                files.append(file_data)
+
+            # Sort files by prefix
+            files.sort(key=lambda x: x['prefix'])
+
+            return JsonResponse({
+                'files': files,
+                'basePath': '/api/netcdf/sound-library-file?file=',
+            })
+
+        except Exception as e:
+            logger.error(f"Failed to list sound library files: {e}")
+            return Response(
+                {'error': f'Failed to list sound library files: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['get'], url_path='sound-library-file')
+    def serve_sound_library_file(self, request):
+        """
+        Serve a file from the sound library folder.
+
+        Query parameters:
+            file: Name of the file to serve (e.g., spectrogram.png)
+
+        Returns:
+            FileResponse with the requested file
+        """
+        filename = request.query_params.get('file')
+        if not filename:
+            return Response(
+                {'error': 'Filename is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Security: prevent directory traversal
+        if '..' in filename or filename.startswith('/'):
+            return Response(
+                {'error': 'Invalid filename'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            datawork_dir = Path(settings.DATAWORK_FOLDER if hasattr(settings, 'DATAWORK_FOLDER') else '/opt/datawork')
+            library_dir = datawork_dir / 'dataset' / 'sound_library'
+            file_path = library_dir / filename
+
+            if not file_path.exists() or not file_path.is_file():
+                raise Http404(f"File not found: {filename}")
+
+            # Determine content type
+            content_types = {
+                '.json': 'application/json',
+                '.png': 'image/png',
+                '.wav': 'audio/wav',
+                '.mp3': 'audio/mpeg',
+            }
+            content_type = content_types.get(file_path.suffix.lower(), 'application/octet-stream')
+
+            return FileResponse(
+                open(file_path, 'rb'),
+                content_type=content_type,
+                as_attachment=False
+            )
+
+        except Http404:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to serve sound library file {filename}: {e}")
+            return Response(
+                {'error': f'Failed to serve file: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
