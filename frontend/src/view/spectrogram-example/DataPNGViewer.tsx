@@ -3,7 +3,6 @@ import Plot from 'react-plotly.js';
 import { IonSpinner } from '@ionic/react';
 import { useAudio } from '@/features/Audio/context';
 import { PlayPauseButton } from '@/features/Audio/PlayPauseButton';
-import { CurrentTime } from '@/features/Audio/CurrentTime';
 import { PlaybackRateSelect } from '@/features/Audio/PlaybackRate';
 import styles from './styles.module.scss';
 
@@ -343,7 +342,7 @@ export const DataPNGViewer: React.FC<DataPNGViewerProps> = ({
   const config = useMemo(() => ({
     displayModeBar: true,
     displaylogo: false,
-    scrollZoom: true,
+    scrollZoom: false,
     doubleClick: 'reset' as const,
     responsive: true,
     modeBarButtonsToRemove: ['lasso2d', 'select2d'] as any,
@@ -542,11 +541,10 @@ export const DataPNGViewer: React.FC<DataPNGViewerProps> = ({
         />
       </div>
 
-      {/* Audio Controls and Navigation - using same components as annotation page */}
+      {/* Audio Controls and Navigation */}
       <div className={styles.navigationPanel}>
         <div className={styles.audioControls}>
           <PlayPauseButton />
-          <CurrentTime />
           <PlaybackRateSelect />
         </div>
 

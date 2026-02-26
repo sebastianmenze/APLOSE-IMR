@@ -358,11 +358,18 @@
   padding: 0.75rem 1rem;
   background: #2a2a2a;
   border-radius: 6px;
+  position: relative;
+  z-index: 10;
 
   .audioControls {
     display: flex;
     align-items: center;
     gap: 1rem;
+
+    // Ensure Ionic buttons are clickable
+    ion-button {
+      pointer-events: auto;
+    }
 
     .playButton {
       width: 40px;
