@@ -160,7 +160,7 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
   const decodePNG = async (url: string, meta: DataPNGMetadata): Promise<number[][]> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.crossOrigin = 'anonymous';
+      // Don't set crossOrigin for same-origin requests
       img.onload = () => {
         const canvas = document.createElement('canvas');
         canvas.width = img.width;
@@ -195,7 +195,10 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
         // Flip vertically (PNG has low freq at top, we want at bottom)
         resolve(spectrogram.reverse());
       };
-      img.onerror = () => reject(new Error('Failed to load PNG image'));
+      img.onerror = (e) => {
+        console.error('PNG load error:', url, e);
+        reject(new Error(`Failed to load PNG image: ${url}`));
+      };
       img.src = url;
     });
   };

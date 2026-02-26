@@ -438,15 +438,15 @@ class NetCDFViewSet(ViewSet):
     def list_sound_library(self, request):
         """
         List available audio files in the sound library folder.
-        Groups files by prefix (e.g., "soi_aural" from "soi_aural_2025_12_23_12_03_03.wav").
+        Groups files by prefix (e.g., "Blue whale D-call" from "Blue whale D-call_2025_09_22_00_04_02.wav").
 
         Returns:
             JSON response with list of available sound files:
             {
                 "files": [
                     {
-                        "prefix": "soi_aural",
-                        "filename": "soi_aural_2025_12_23_12_03_03.wav",
+                        "prefix": "Blue whale D-call",
+                        "filename": "Blue whale D-call_2025_09_22_00_04_02.wav",
                         "analyses": [
                             {"fft": 4096, "json": "file_fft4096_data.json", "png": "file_fft4096_data.png"},
                         ]
@@ -473,7 +473,8 @@ class NetCDFViewSet(ViewSet):
 
             # Group by WAV file (extract prefix from filename)
             files_dict = {}
-            fft_pattern = re.compile(r'(.+)_fft(\d+)_data\.json$')
+            # Pattern: anything_fftNNNN_data.json (captures base name and fft size)
+            fft_pattern = re.compile(r'^(.+)_fft(\d+)_data\.json$')
 
             for json_file in sorted(json_files):
                 match = fft_pattern.match(json_file.name)
@@ -492,10 +493,10 @@ class NetCDFViewSet(ViewSet):
                     wav_file = metadata.get('audio', {}).get('filename', '')
 
                     # Extract prefix from wav filename (everything before the date pattern)
-                    # Pattern: prefix_YYYY_MM_DD_HH_MM_SS.wav
-                    prefix_match = re.match(r'^(.+?)_\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_\d{2}\.wav$', wav_file)
+                    # Pattern: prefix_YYYY_MM_DD_HH_MM_SS.wav (prefix can contain spaces)
+                    prefix_match = re.match(r'^(.+)_\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_\d{2}\.wav$', wav_file)
                     if prefix_match:
-                        prefix = prefix_match.group(1)
+                        prefix = prefix_match.group(1).strip()
                     else:
                         # Fallback: use filename without extension
                         prefix = os.path.splitext(wav_file)[0] if wav_file else base_name
