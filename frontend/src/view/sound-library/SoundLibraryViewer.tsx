@@ -119,8 +119,10 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
         const meta: DataPNGMetadata = await jsonResponse.json();
         setMetadata(meta);
 
-        // Load PNG and decode
-        const pngUrl = `${basePath}${encodeURIComponent(meta.png_file)}`;
+        // Derive PNG filename from JSON filename (replace .json with .png)
+        // This handles cases where files were renamed but JSON metadata still has old filename
+        const pngFilename = jsonPath.replace(/\.json$/, '.png');
+        const pngUrl = `${basePath}${encodeURIComponent(pngFilename)}`;
         const pngData = await decodePNG(pngUrl, meta);
         setSpectrogramData(pngData);
 
