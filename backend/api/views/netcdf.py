@@ -13,6 +13,7 @@ from rest_framework.decorators import action
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 
 from backend.api.models import SpectrogramAnalysis
 
@@ -434,7 +435,7 @@ class NetCDFViewSet(ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    @action(detail=False, methods=['get'], url_path='list-sound-library')
+    @action(detail=False, methods=['get'], url_path='list-sound-library', permission_classes=[AllowAny])
     def list_sound_library(self, request):
         """
         List available audio files in the sound library folder.
@@ -550,7 +551,7 @@ class NetCDFViewSet(ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    @action(detail=False, methods=['get'], url_path='sound-library-file')
+    @action(detail=False, methods=['get'], url_path='sound-library-file', permission_classes=[AllowAny])
     def serve_sound_library_file(self, request):
         """
         Serve a file from the sound library folder.

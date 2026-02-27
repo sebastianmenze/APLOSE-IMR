@@ -141,7 +141,8 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "DEFAULT_PAGINATION_CLASS": "backend.osmosewebsite.pagination.OsmosePagination",
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
         "backend.utils.filters.ModelFilter",
@@ -168,7 +169,6 @@ FIXTURE_DIRS = (
     BASE_DIR / "backend/api/tests/fixtures/annotation",
     BASE_DIR / "backend/api/tests/fixtures/common",
     BASE_DIR / "backend/api/tests/fixtures/data",
-    BASE_DIR / "backend/osmosewebsite/tests/fixtures",
 )
 
 # TINYMCE Configuration
