@@ -54,6 +54,8 @@ export const Navbar: React.FC<{ className?: string }> = ({ className }) => {
 
         <Link appPath="/account" color="medium" onClick={ close }>Account</Link>
 
+        <Link href="/" color="medium" onClick={ close }>OceanSound</Link>
+
         <IonButton className={ styles.logoutButton }
                    color={ 'medium' }
                    onClick={ () => logout() }>
