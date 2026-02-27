@@ -33,7 +33,6 @@ from backend.api.models.data.scales import get_frequency_scales
 from backend.api.schema.enums import AnnotationType
 from backend.aplose.models import AploseUser
 from backend.aplose.models.user import ExpertiseLevel
-from backend.osmosewebsite.management.commands.seed import Command as WebsiteCommand
 
 
 class Command(management.BaseCommand):
@@ -96,7 +95,6 @@ class Command(management.BaseCommand):
         self._create_annotation_campaigns()
         self._create_annotations()
         self._create_comments()
-        WebsiteCommand().handle(*args, **options)
 
     def _create_users(self):
         print(" ###### _create_users ######")

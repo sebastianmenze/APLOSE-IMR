@@ -1,8 +1,7 @@
 """GraphQL Schema"""
 
 import graphene
-from django_filters import NumberFilter
-from graphene import relay, Field
+from graphene import relay
 from graphene_django.debug import DjangoDebug
 from graphene_django_pagination import DjangoPaginationConnectionField
 from metadatax.acquisition.models import Deployment, Project, ChannelConfiguration
@@ -20,14 +19,11 @@ from metadatax.schema import Mutation as MetadataxMutation, Query as MetadataxQu
 
 from .api.schema import APIQuery, APIMutation
 from .aplose.schema import AploseQuery, AploseMutation
-from .osmosewebsite.schema import OSmOSEWebsiteQuery, WebsiteProjectNode
 from .utils.schema.filters import IDFilter
 
 
 class DeploymentFilter(MetadataxDeploymentFilter):
     """Override of Metadatax deployment filter"""
-
-    project__website_project__id = NumberFilter()
 
     class Meta(MetadataxDeploymentFilter.Meta):
         """Override of Metadatax deployment filter"""
@@ -44,8 +40,6 @@ class DeploymentNode(MetadataxDeploymentNode):
 
 
 class ProjectNodeOverride(MetadataxProjectNode):
-    website_project = Field(WebsiteProjectNode)
-
     class Meta:
         model = Project
         fields = "__all__"
@@ -72,7 +66,6 @@ class ChannelConfigurationNode(MxChannelConfigurationNode):
 class Query(
     APIQuery,
     AploseQuery,
-    OSmOSEWebsiteQuery,
     MetadataxQuery,
     graphene.ObjectType,
 ):

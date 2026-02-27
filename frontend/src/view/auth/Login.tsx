@@ -22,7 +22,7 @@ export const Login: React.FC = () => {
   // Service
   const navigate = useNavigate();
   const location = useLocation();
-  const { from } = location.state || { from: { pathname: '/annotation-campaign' } };
+  const { from } = location.state || { from: { pathname: '/app/annotation-campaign' } };
   const [ login, { isLoading, error: loginError } ] = useLogin();
   const toast = useToast()
 
@@ -52,7 +52,7 @@ export const Login: React.FC = () => {
   }, [ setErrors, username, password ])
 
   const goHome = useCallback(() => {
-    navigate('/');
+    navigate('/oceansound');
   }, [])
 
   const onKbdEvent = useCallback((event: KeyboardEvent) => {
@@ -68,7 +68,7 @@ export const Login: React.FC = () => {
   return <div className={ styles.page }>
     <Header buttons={ <Fragment>
       <Button color="dark" size="large" fill="clear" onClick={ goHome }>Home</Button>
-      <Link href="/" size="large">OSmOSE</Link>
+      <Link appPath="/oceansound" size="large">OceanSound</Link>
     </Fragment> }/>
     <div className={ styles.content }>
       <h2>Login</h2>

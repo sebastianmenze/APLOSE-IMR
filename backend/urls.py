@@ -32,7 +32,6 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from backend.api.urls import api_router
 from backend.aplose.urls import aplose_router
-from backend.osmosewebsite.urls import website_router
 from backend.sql.urls import sql_router
 from backend.utils.schema import DRFAuthenticatedGraphQLView
 
@@ -52,7 +51,6 @@ api_urlpatterns = [
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("", include(api_router.urls)),
     path("", include(aplose_router.urls)),
-    path("", include(website_router.urls)),
     path("", include(sql_router.urls)),
     path("graphql", csrf_exempt(DRFAuthenticatedGraphQLView.as_view(graphiql=True))),
 ]
