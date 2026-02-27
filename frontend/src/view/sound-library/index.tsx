@@ -25,8 +25,8 @@ interface SoundLibraryResponse {
 /**
  * Sound Library Page
  *
- * Displays audio files from the sound library folder.
- * Shows files grouped by prefix with spectrogram visualization.
+ * Displays audio files from the sound library folder as thumbnails.
+ * Click on a thumbnail to view the full spectrogram.
  */
 export const SoundLibraryPage: React.FC = () => {
   const [files, setFiles] = useState<SoundFile[]>([]);
@@ -84,10 +84,26 @@ export const SoundLibraryPage: React.FC = () => {
     }));
   }, [selectedFile]);
 
-  // Handle file selection
+  // Handle file selection from thumbnail
   const handleFileSelect = useCallback((index: number) => {
     setSelectedFileIndex(index);
   }, []);
+
+  // Handle back to thumbnails
+  const handleBack = useCallback(() => {
+    setSelectedFileIndex(null);
+  }, []);
+
+  // Get thumbnail URL for a file (use first analysis PNG)
+  const getThumbnailUrl = useCallback((file: SoundFile) => {
+    const firstAnalysis = file.analyses[0];
+    if (firstAnalysis?.json) {
+      // Derive PNG from JSON filename
+      const pngFilename = firstAnalysis.json.replace(/\.json$/, '.png');
+      return `${basePath}${encodeURIComponent(pngFilename)}`;
+    }
+    return null;
+  }, [basePath]);
 
   if (loading) {
     return (
@@ -115,54 +131,63 @@ export const SoundLibraryPage: React.FC = () => {
     );
   }
 
+  // Show full viewer when a file is selected
+  if (selectedFile && selectedAnalysis) {
+    return (
+      <div className={styles.pageContainer}>
+        <div className={styles.viewerFullPage}>
+          <SoundLibraryViewer
+            jsonPath={selectedAnalysis.json}
+            basePath={basePath}
+            wavFile={selectedFile.filename}
+            fftOptions={fftOptions}
+            selectedFftIndex={selectedFftIndex}
+            onFftChange={setSelectedFftIndex}
+            onBack={handleBack}
+            fileSelector={
+              <select
+                value={selectedFileIndex ?? ''}
+                onChange={(e) => setSelectedFileIndex(parseInt(e.target.value))}
+                className={styles.fileDropdown}
+              >
+                {files.map((file, idx) => (
+                  <option key={file.filename || file.baseName} value={idx}>
+                    {file.prefix}
+                  </option>
+                ))}
+              </select>
+            }
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Show thumbnail grid
   return (
     <div className={styles.pageContainer}>
-      <div className={styles.contentWrapper}>
-        {/* File List Panel */}
-        <div className={styles.fileListPanel}>
-          <h2>Sound Library</h2>
-          <div className={styles.fileList}>
-            {files.map((file, index) => (
-              <button
+      <div className={styles.thumbnailPage}>
+        <h1 className={styles.pageTitle}>Sound Library</h1>
+        <div className={styles.thumbnailGrid}>
+          {files.map((file, index) => {
+            const thumbnailUrl = getThumbnailUrl(file);
+            return (
+              <div
                 key={file.filename || file.baseName}
-                className={`${styles.fileItem} ${selectedFileIndex === index ? styles.active : ''}`}
+                className={styles.thumbnailCard}
                 onClick={() => handleFileSelect(index)}
               >
-                {file.prefix}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Viewer Panel */}
-        <div className={styles.viewerPanel}>
-          {selectedFile && selectedAnalysis ? (
-            <SoundLibraryViewer
-              jsonPath={selectedAnalysis.json}
-              basePath={basePath}
-              wavFile={selectedFile.filename}
-              fftOptions={fftOptions}
-              selectedFftIndex={selectedFftIndex}
-              onFftChange={setSelectedFftIndex}
-              fileSelector={
-                <select
-                  value={selectedFileIndex ?? ''}
-                  onChange={(e) => setSelectedFileIndex(parseInt(e.target.value))}
-                  className={styles.fileDropdown}
-                >
-                  {files.map((file, idx) => (
-                    <option key={file.filename || file.baseName} value={idx}>
-                      {file.prefix}
-                    </option>
-                  ))}
-                </select>
-              }
-            />
-          ) : (
-            <div className={styles.selectPrompt}>
-              <p>Select a sound from the list to view its spectrogram</p>
-            </div>
-          )}
+                <div className={styles.thumbnailImage}>
+                  {thumbnailUrl ? (
+                    <img src={thumbnailUrl} alt={file.prefix} />
+                  ) : (
+                    <div className={styles.noImage}>No preview</div>
+                  )}
+                </div>
+                <div className={styles.thumbnailTitle}>{file.prefix}</div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

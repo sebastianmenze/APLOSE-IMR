@@ -64,6 +64,7 @@ interface SoundLibraryViewerProps {
   fftOptions?: FftOption[];
   selectedFftIndex?: number;
   onFftChange?: (index: number) => void;
+  onBack?: () => void;
   fileSelector?: ReactNode;
 }
 
@@ -84,6 +85,7 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
   fftOptions = [],
   selectedFftIndex = 0,
   onFftChange,
+  onBack,
   fileSelector,
 }) => {
   const [metadata, setMetadata] = useState<DataPNGMetadata | null>(null);
@@ -444,6 +446,13 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
     <div className={styles.viewerContainer}>
       {/* Controls Panel */}
       <div className={styles.controlsPanel}>
+        {/* Back Button */}
+        {onBack && (
+          <button className={styles.backButton} onClick={onBack}>
+            ← Back
+          </button>
+        )}
+
         {/* File Selector Dropdown */}
         {fileSelector && (
           <div className={styles.controlGroup}>
