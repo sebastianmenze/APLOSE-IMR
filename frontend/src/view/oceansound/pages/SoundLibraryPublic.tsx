@@ -182,9 +182,6 @@ export const SoundLibraryPublic: React.FC = () => {
                 </div>
                 <div className={styles.soundInfo}>
                   <h3>{file.prefix}</h3>
-                  <p className={styles.analysisCount}>
-                    {file.analyses.length} analysis{file.analyses.length !== 1 ? 'es' : ''}
-                  </p>
                 </div>
               </div>
             );
