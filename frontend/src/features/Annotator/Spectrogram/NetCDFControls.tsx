@@ -165,30 +165,26 @@ export const NetCDFControls: React.FC<NetCDFControlsProps> = ({
       </div>
 
       <div className={styles.controlGroup}>
-        <label>
-          Freq Min: {currentFreqMin.toFixed(0)} Hz
-        </label>
+        <label>Freq Min (Hz)</label>
         <input
-          type="range"
-          min={freqMin}
-          max={freqMax}
-          step={(freqMax - freqMin) / 200}
-          value={currentFreqMin}
-          onChange={(e) => handleFreqMinChange(parseFloat(e.target.value))}
+          type="number"
+          min={Math.round(freqMin)}
+          max={Math.round(freqMax)}
+          step={1}
+          value={Math.round(currentFreqMin)}
+          onChange={(e) => handleFreqMinChange(parseInt(e.target.value, 10))}
         />
       </div>
 
       <div className={styles.controlGroup}>
-        <label>
-          Freq Max: {currentFreqMax.toFixed(0)} Hz
-        </label>
+        <label>Freq Max (Hz)</label>
         <input
-          type="range"
-          min={freqMin}
-          max={freqMax}
-          step={(freqMax - freqMin) / 200}
-          value={currentFreqMax}
-          onChange={(e) => handleFreqMaxChange(parseFloat(e.target.value))}
+          type="number"
+          min={Math.round(freqMin)}
+          max={Math.round(freqMax)}
+          step={1}
+          value={Math.round(currentFreqMax)}
+          onChange={(e) => handleFreqMaxChange(parseInt(e.target.value, 10))}
         />
       </div>
 
