@@ -68,6 +68,20 @@ interface SoundLibraryViewerProps {
   fileSelector?: ReactNode;
 }
 
+const LOG_STEPS = 1000;
+
+function freqToPos(freq: number, minHz: number, maxHz: number): number {
+  const lo = Math.max(minHz, 1);
+  if (lo >= maxHz) return 0;
+  return Math.round((Math.log(Math.max(freq, lo) / lo) / Math.log(maxHz / lo)) * LOG_STEPS);
+}
+
+function posToFreq(pos: number, minHz: number, maxHz: number): number {
+  const lo = Math.max(minHz, 1);
+  if (lo >= maxHz) return lo;
+  return Math.round(lo * Math.pow(maxHz / lo, pos / LOG_STEPS));
+}
+
 const COLORSCALES = [
   'Viridis', 'Hot', 'Jet', 'Portland', 'Picnic', 'Rainbow',
   'Blackbody', 'Earth', 'Electric', 'Greens', 'Blues', 'Greys', 'Greys_r', 'YlGnBu', 'YlOrRd',
@@ -102,8 +116,18 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
   // Controls
   const [colorscale, setColorscale] = useState('Greys_r');
   const [yAxisScale, setYAxisScale] = useState<'log' | 'linear'>('linear');
+
+  // Draft state — only pushed to plot on Apply
+  const [draftZmin, setDraftZmin] = useState(-120);
+  const [draftZmax, setDraftZmax] = useState(0);
+  const [draftFreqMin, setDraftFreqMin] = useState(0);
+  const [draftFreqMax, setDraftFreqMax] = useState(24000);
+
+  // Applied state — what the plot actually uses
   const [zmin, setZmin] = useState<number | null>(null);
   const [zmax, setZmax] = useState<number | null>(null);
+  const [appliedFreqMin, setAppliedFreqMin] = useState<number | null>(null);
+  const [appliedFreqMax, setAppliedFreqMax] = useState<number | null>(null);
 
   // Load metadata and PNG
   useEffect(() => {
@@ -133,9 +157,15 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
           setYAxisScale(meta.spectrogram.frequency_scale);
         }
 
-        // Reset z-range to use data range
+        // Reset all draft + applied ranges to match new file
+        setDraftZmin(meta.encoding.db_min);
+        setDraftZmax(meta.encoding.db_max);
         setZmin(null);
         setZmax(null);
+        setDraftFreqMin(meta.spectrogram.frequency_min);
+        setDraftFreqMax(meta.spectrogram.frequency_max);
+        setAppliedFreqMin(null);
+        setAppliedFreqMax(null);
 
         // Set audio source
         const audioUrl = wavFile
@@ -213,9 +243,34 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
     return { min: metadata.encoding.db_min, max: metadata.encoding.db_max };
   }, [metadata]);
 
-  // Effective z-range
+  // Effective ranges (applied → plot)
   const effectiveZmin = zmin ?? dataRange.min;
   const effectiveZmax = zmax ?? dataRange.max;
+  const freqDataMin = metadata?.spectrogram.frequency_min ?? 0;
+  const freqDataMax = metadata?.spectrogram.frequency_max ?? 24000;
+  const effectiveFreqMin = appliedFreqMin ?? freqDataMin;
+  const effectiveFreqMax = appliedFreqMax ?? freqDataMax;
+
+  const handleApplyAll = () => {
+    setZmin(draftZmin);
+    setZmax(draftZmax);
+    setAppliedFreqMin(draftFreqMin);
+    setAppliedFreqMax(draftFreqMax);
+  };
+
+  const handleResetZRange = () => {
+    setDraftZmin(dataRange.min);
+    setDraftZmax(dataRange.max);
+    setZmin(null);
+    setZmax(null);
+  };
+
+  const handleResetFreqRange = () => {
+    setDraftFreqMin(freqDataMin);
+    setDraftFreqMax(freqDataMax);
+    setAppliedFreqMin(null);
+    setAppliedFreqMax(null);
+  };
 
   // Generate frequency and time arrays based on metadata scale
   const { frequencies, times } = useMemo(() => {
@@ -275,7 +330,7 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
   const layout = useMemo(() => {
     if (!metadata) return {};
 
-    const { frequency_min, frequency_max, time_min, time_max } = metadata.spectrogram;
+    const { time_min, time_max } = metadata.spectrogram;
 
     const shapes: any[] = [];
 
@@ -285,8 +340,8 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
         type: 'line' as const,
         x0: audio.time,
         x1: audio.time,
-        y0: frequency_min,
-        y1: frequency_max,
+        y0: effectiveFreqMin,
+        y1: effectiveFreqMax,
         yref: 'y' as const,
         line: { color: '#ff0000', width: 2 },
         layer: 'above' as const,
@@ -297,13 +352,13 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
     const yAxisConfig = yAxisScale === 'log'
       ? {
           type: 'log' as const,
-          range: [Math.log10(Math.max(1, frequency_min)), Math.log10(frequency_max)],
+          range: [Math.log10(Math.max(1, effectiveFreqMin)), Math.log10(effectiveFreqMax)],
           autorange: false,
           fixedrange: false,
         }
       : {
           type: 'linear' as const,
-          range: [frequency_min, frequency_max],
+          range: [effectiveFreqMin, effectiveFreqMax],
           autorange: false,
           fixedrange: false,
         };
@@ -334,7 +389,7 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
       paper_bgcolor: '#000',
       font: { color: '#fff' },
     };
-  }, [metadata, yAxisScale, audio.time]);
+  }, [metadata, yAxisScale, audio.time, effectiveFreqMin, effectiveFreqMax]);
 
   const config = useMemo(() => ({
     displayModeBar: true,
@@ -504,32 +559,61 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
         </div>
 
         <div className={styles.controlGroup}>
-          <label>Min: {effectiveZmin.toFixed(0)} dB</label>
+          <label>Min: {draftZmin.toFixed(1)} dB</label>
           <input
             type="range"
             min={dataRange.min}
             max={dataRange.max}
-            step={1}
-            value={effectiveZmin}
-            onChange={(e) => setZmin(parseFloat(e.target.value))}
+            step={(dataRange.max - dataRange.min) / 100}
+            value={draftZmin}
+            onChange={(e) => setDraftZmin(parseFloat(e.target.value))}
           />
         </div>
 
         <div className={styles.controlGroup}>
-          <label>Max: {effectiveZmax.toFixed(0)} dB</label>
+          <label>Max: {draftZmax.toFixed(1)} dB</label>
           <input
             type="range"
             min={dataRange.min}
             max={dataRange.max}
+            step={(dataRange.max - dataRange.min) / 100}
+            value={draftZmax}
+            onChange={(e) => setDraftZmax(parseFloat(e.target.value))}
+          />
+          <button className={styles.resetButton} onClick={handleResetZRange}>
+            Reset dB
+          </button>
+        </div>
+
+        <div className={styles.controlGroup}>
+          <label>Freq Min: {draftFreqMin} Hz</label>
+          <input
+            type="range"
+            min={0}
+            max={LOG_STEPS}
             step={1}
-            value={effectiveZmax}
-            onChange={(e) => setZmax(parseFloat(e.target.value))}
+            value={freqToPos(draftFreqMin, freqDataMin, freqDataMax)}
+            onChange={(e) => setDraftFreqMin(posToFreq(parseInt(e.target.value, 10), freqDataMin, freqDataMax))}
           />
         </div>
 
-        <button className={styles.resetButton} onClick={() => { setZmin(null); setZmax(null); }}>
-          Reset
-        </button>
+        <div className={styles.controlGroup}>
+          <label>Freq Max: {draftFreqMax} Hz</label>
+          <input
+            type="range"
+            min={0}
+            max={LOG_STEPS}
+            step={1}
+            value={freqToPos(draftFreqMax, freqDataMin, freqDataMax)}
+            onChange={(e) => setDraftFreqMax(posToFreq(parseInt(e.target.value, 10), freqDataMin, freqDataMax))}
+          />
+          <button className={styles.resetButton} onClick={handleResetFreqRange}>
+            Reset Freq
+          </button>
+          <button className={styles.applyButton} onClick={handleApplyAll}>
+            Apply ranges
+          </button>
+        </div>
 
         <div className={styles.infoText}>
           <span>{metadata.temporal.begin}</span>

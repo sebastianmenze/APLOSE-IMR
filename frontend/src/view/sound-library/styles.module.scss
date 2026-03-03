@@ -275,9 +275,27 @@
     font-size: 0.85rem;
     cursor: pointer;
     transition: background 0.2s;
+    white-space: nowrap;
 
     &:hover {
       background: #3a3a3a;
+    }
+  }
+
+  .applyButton {
+    padding: 0.4rem 0.85rem;
+    background: #0066cc;
+    color: #fff;
+    border: 1px solid #0055aa;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+
+    &:hover {
+      background: #0077ee;
     }
   }
 
