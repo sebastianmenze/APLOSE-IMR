@@ -34,7 +34,7 @@ export const CommentBloc: React.FC = () => {
     <Textarea maxLength={ 255 }
               rows={ 5 }
               placeholder="Enter your comment"
-              style={ { resize: 'none' } }
+              style={ { resize: 'none', color: 'white' } }
               disabled={ focusedAnnotation && focusedAnnotation?.annotator !== user?.id }
               value={ focusedComment?.comment ?? '' }
               onInput={ updateComment }/>

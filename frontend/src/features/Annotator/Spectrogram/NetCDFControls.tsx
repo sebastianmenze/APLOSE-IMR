@@ -26,6 +26,20 @@ interface NetCDFControlsProps {
   freqMax: number;
 }
 
+const LOG_STEPS = 1000;
+
+function freqToPos(freq: number, minHz: number, maxHz: number): number {
+  const lo = Math.max(minHz, 1);
+  if (lo >= maxHz) return 0;
+  return Math.round((Math.log(Math.max(freq, lo) / lo) / Math.log(maxHz / lo)) * LOG_STEPS);
+}
+
+function posToFreq(pos: number, minHz: number, maxHz: number): number {
+  const lo = Math.max(minHz, 1);
+  if (lo >= maxHz) return lo;
+  return Math.round(lo * Math.pow(maxHz / lo, pos / LOG_STEPS));
+}
+
 const COLORSCALES = [
   'Viridis',
   'Hot',
@@ -167,11 +181,11 @@ export const NetCDFControls: React.FC<NetCDFControlsProps> = ({
         <label>Freq Min: {draftFreqMin} Hz</label>
         <input
           type="range"
-          min={Math.round(freqMin)}
-          max={Math.round(freqMax)}
+          min={0}
+          max={LOG_STEPS}
           step={1}
-          value={draftFreqMin}
-          onChange={(e) => setDraftFreqMin(parseInt(e.target.value, 10))}
+          value={freqToPos(draftFreqMin, freqMin, freqMax)}
+          onChange={(e) => setDraftFreqMin(posToFreq(parseInt(e.target.value, 10), freqMin, freqMax))}
         />
       </div>
 
@@ -179,18 +193,15 @@ export const NetCDFControls: React.FC<NetCDFControlsProps> = ({
         <label>Freq Max: {draftFreqMax} Hz</label>
         <input
           type="range"
-          min={Math.round(freqMin)}
-          max={Math.round(freqMax)}
+          min={0}
+          max={LOG_STEPS}
           step={1}
-          value={draftFreqMax}
-          onChange={(e) => setDraftFreqMax(parseInt(e.target.value, 10))}
+          value={freqToPos(draftFreqMax, freqMin, freqMax)}
+          onChange={(e) => setDraftFreqMax(posToFreq(parseInt(e.target.value, 10), freqMin, freqMax))}
         />
         <button onClick={handleResetFreqRange} className={styles.resetButton}>
           Reset Freq
         </button>
-      </div>
-
-      <div className={styles.controlGroup} style={{ marginLeft: 'auto' }}>
         <button onClick={handleApplyAll} className={styles.applyButton}>
           Apply ranges
         </button>
