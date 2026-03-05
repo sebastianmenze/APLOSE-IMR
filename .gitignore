@@ -88,3 +88,6 @@ dist-ssr
 .tool-versions
 
 venv
+
+# dont push data to server
+volumes/datawork/dataset
