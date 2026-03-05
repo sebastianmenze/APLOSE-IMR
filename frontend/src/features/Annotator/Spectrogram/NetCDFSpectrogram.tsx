@@ -427,7 +427,7 @@ export const NetCDFSpectrogram: React.FC = () => {
   }, [isDrawingEnabled, netcdfData]);
 
   if (loading) {
-    return <div className={styles.loading}>Loading NetCDF spectrogram...</div>;
+    return <div className={styles.loading}>Loading spectrogram...</div>;
   }
 
   if (error || !netcdfData) {
