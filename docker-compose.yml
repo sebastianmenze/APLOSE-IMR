@@ -54,8 +54,8 @@ services:
     image: steveltn/https-portal:1.24
     container_name: osmose_https-portal
     ports:
-      - '8080:80'
-      - '8443:443'
+      - '80:80'
+      - '443:443'
     volumes:
       - https-portal-data:/var/lib/https-portal
     environment:
