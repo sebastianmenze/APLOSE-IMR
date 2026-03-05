@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { IonIcon } from '@ionic/react';
 import { menuOutline, closeOutline } from 'ionicons/icons';
 import styles from './styles.module.scss';
-import logo from '/images/ode_logo_192x192.png';
+import logo from '/images/home/hilogo.png';
 
 interface OceanSoundLayoutProps {
   children: ReactNode;
@@ -47,8 +47,8 @@ export const OceanSoundLayout: React.FC<OceanSoundLayoutProps> = ({ children }) 
       <nav className={`${styles.sideNav} ${menuOpen ? styles.open : ''}`}>
         <div className={styles.logoSection}>
           <img src={logo} alt="OceanSound" className={styles.logo} />
-          <h1 className={styles.siteTitle}>OceanSound</h1>
-          <p className={styles.siteSubtitle}>Passive Acoustic Monitoring Platform</p>
+          <h1 className={styles.siteTitle}>IMR OceanSound</h1>
+          <p className={styles.siteSubtitle}>Underwater sound recordings at the Institute of marine research</p>
         </div>
 
         <div className={styles.navLinks}>
