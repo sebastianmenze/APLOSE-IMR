@@ -1,12 +1,11 @@
-import React, { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IonButton, IonSpinner } from '@ionic/react';
 import { useToast } from '@/components/ui';
-import { FormBloc, Input, Select, Textarea } from '@/components/form';
+import { FormBloc, Input, Textarea } from '@/components/form';
 import { DatasetSelect } from '@/features/Dataset';
 import styles from './styles.module.scss'
 import { useCreateCampaign } from '@/api';
-import { type Colormap, COLORMAPS } from '@/features/Colormap';
 
 export const NewAnnotationCampaign: React.FC = () => {
 
@@ -43,31 +42,6 @@ export const NewAnnotationCampaign: React.FC = () => {
   // Data
   const [ datasetID, setDatasetID ] = useState<string | undefined>();
   const [ analysisIDs, setAnalysisIDs ] = useState<string[]>([]);
-  const [ analysisColormaps, setAnalysisColormaps ] = useState<string[]>([]);
-
-  // Spectrogram tuning
-  const [ allowImageTuning, setAllowImageTuning ] = useState<boolean>(false);
-  const [ allowColormapTuning, setAllowColormapTuning ] = useState<boolean>(false);
-  const [ colormapDefault, setColormapDefault ] = useState<Colormap | null>(null);
-  const [ colormapInvertedDefault, setColormapInvertedDefault ] = useState<boolean | null>(null);
-  const onAllowImageTuningChange = useCallback(() => {
-    setAllowImageTuning(prev => !prev)
-  }, [ setAllowImageTuning ])
-  const onAllowColormapTuningChange = useCallback(() => {
-    setAllowColormapTuning(prev => {
-      const newValue = !prev;
-      setColormapDefault(newValue ? 'Greys' : null)
-      setColormapInvertedDefault(newValue ? false : null)
-      return newValue
-    })
-  }, [ setAllowColormapTuning, setColormapDefault ])
-  const onColormapDefaultChange = useCallback((value: string | number | undefined) => {
-    setColormapDefault(value as Colormap ?? null)
-  }, [ setColormapDefault ])
-  const onColormapInvertedDefaultChange = useCallback(() => {
-    setColormapInvertedDefault(prev => !prev)
-  }, [ setColormapInvertedDefault ])
-  const isColormapEditable = useMemo(() => analysisColormaps.includes('Greys'), [ analysisColormaps ]);
 
   // Submit
   const submit = useCallback(() => {
@@ -81,12 +55,12 @@ export const NewAnnotationCampaign: React.FC = () => {
       deadline: deadline || undefined,
       datasetID,
       analysisIDs,
-      allowImageTuning,
-      allowColormapTuning,
-      colormapDefault,
-      colormapInvertedDefault,
+      allowImageTuning: false,
+      allowColormapTuning: false,
+      colormapDefault: null,
+      colormapInvertedDefault: null,
     })
-  }, [ name, description, instructionsUrl, deadline, datasetID, analysisIDs, allowImageTuning, allowColormapTuning, colormapDefault, colormapInvertedDefault ])
+  }, [ name, description, instructionsUrl, deadline, datasetID, analysisIDs ])
 
   useEffect(() => {
     if (errors) toast.raiseError({ error: errors })
@@ -126,39 +100,7 @@ export const NewAnnotationCampaign: React.FC = () => {
                      datasetError={ formErrors?.find(e => e?.field === 'datasetID')?.messages.join(', ') }
                      analysisError={ formErrors?.find(e => e?.field === 'analysisIDs')?.messages.join(', ') }
                      onDatasetSelected={ setDatasetID }
-                     onAnalysisSelected={ setAnalysisIDs }
-                     onAnalysisColormapsChanged={ setAnalysisColormaps }/>
-    </FormBloc>
-
-    {/* Spectrogram tuning */ }
-    <FormBloc label="Spectrogram Tuning">
-      {/* Allow brightness / contrast tuning */ }
-      <Input type="checkbox" label="Allow brigthness / contrast modification"
-             checked={ allowImageTuning } onChange={ onAllowImageTuningChange }/>
-
-      {/* Allow colormap tuning */ }
-      <Input type="checkbox" label="Allow colormap modification" disabled={ !isColormapEditable }
-             checked={ allowColormapTuning } onChange={ onAllowColormapTuningChange }
-             note={ isColormapEditable ? undefined : 'Available only when at least one spectrogram configuration was generated in grey scale' }/>
-
-      {/* Default colormap */ }
-      { allowColormapTuning && <Select
-          required={ true }
-          error={ formErrors?.find(e => e?.field === 'colormapDefault')?.messages.join(', ') }
-          label="Default colormap"
-          value={ colormapDefault ?? 'Greys' as Colormap }
-          placeholder="Select a default colormap"
-          optionsContainer="popover"
-          options={ Object.keys(COLORMAPS).map((colormap) => ({
-            value: colormap, label: colormap, img: `/app/images/colormaps/${ colormap.toLowerCase() }.png`,
-          })) }
-          onValueSelected={ onColormapDefaultChange }/> }
-
-      {/* Default colormap inverted? */ }
-      { allowColormapTuning && <Input type="checkbox" label="Invert default colormap" disabled={ !isColormapEditable }
-                                      checked={ colormapInvertedDefault ?? false }
-                                      onChange={ onColormapInvertedDefaultChange }
-                                      note={ isColormapEditable ? undefined : 'Available only when at least one spectrogram configuration was generated in grey scale' }/> }
+                     onAnalysisSelected={ setAnalysisIDs }/>
     </FormBloc>
 
     <div className={ styles.buttons }>
