@@ -90,4 +90,4 @@ dist-ssr
 venv
 
 # dont push data to server
-volumes/datawork/dataset
+/volumes
