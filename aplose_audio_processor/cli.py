@@ -150,7 +150,7 @@ Examples:
     parser.add_argument(
         '--normalize-audio',
         action='store_true',
-        help='Normalize audio to [-1, 1] before computing spectrogram'
+        help='Normalize audio by dividing by its mean absolute value before computing spectrogram'
     )
     parser.add_argument(
         '--min-frequency',
