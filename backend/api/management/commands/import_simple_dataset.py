@@ -56,7 +56,6 @@ class Command(BaseCommand):
             default=None
         )
 
-    @transaction.atomic
     def handle(self, *args, **options):
         folder_path = options['folder']
         dataset_name = options['name'] or folder_path
@@ -241,6 +240,7 @@ class Command(BaseCommand):
 
             for i, spec_file in enumerate(spec_files, 1):
                 try:
+                  with transaction.atomic():
                     spec_metadata = spec_file.metadata
                     from django.utils import timezone as django_timezone
 
