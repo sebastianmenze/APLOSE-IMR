@@ -9,7 +9,7 @@ This portal is running as docker container, the modified APLOSE codebase can be 
 
 For questions about the OceanSound portal and passive acoustic data analysis, please contact sebastian.menze@imr.no.
 
-[https://github.com/sebastianmenze/APLOSE-IMR](https://github.com/sebastianmenze/APLOSE-IMR)
+[https://sebastianmenze.github.io/](https://sebastianmenze.github.io/)
 
 ## Our Mission
 
