@@ -17,10 +17,10 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { path: '/oceansound', label: 'Home' },
-  { path: '/oceansound/about', label: 'About' },
   { path: '/oceansound/pam', label: 'Passive Acoustic Monitoring' },
   { path: '/oceansound/sounds', label: 'Sound Library' },
   { path: '/oceansound/publications', label: 'Publications' },
+  { path: '/oceansound/about', label: 'About' },
 ];
 
 export const OceanSoundLayout: React.FC<OceanSoundLayoutProps> = ({ children }) => {
