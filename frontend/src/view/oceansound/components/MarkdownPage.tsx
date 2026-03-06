@@ -92,7 +92,6 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
   let currentList: { type: 'ul' | 'ol'; items: string[] } | null = null;
   let blockquoteLines: string[] = [];
   let tableRows: string[][] = [];   // each entry = array of cell strings for that row
-  let tableHasHeader = false;
   let key = 0;
 
   const processInlineMarkdown = (text: string): React.ReactNode => {
@@ -262,7 +261,6 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
     if (tableRows.length === 0) return;
     const rows = tableRows;
     tableRows = [];
-    tableHasHeader = false;
     // rows[1] is separator if it exists and looks like one
     const hasSep = rows.length > 1 && isSeparatorRow(rows[1]);
     const headerRow = hasSep ? rows[0] : null;
