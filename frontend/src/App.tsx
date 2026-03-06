@@ -26,6 +26,7 @@ const ImportAnnotations = lazy(() => import('./view/annotation-campaign/[campaig
 const AnnotatorPage = lazy(() => import('./view/annotation-campaign/[campaignID]/phase/[phaseType]/spectrogram/[spectrogramID]'));
 const SoundLibraryPage = lazy(() => import('./view/sound-library'));
 const DocumentationPage = lazy(() => import('./view/documentation'));
+const AboutPage = lazy(() => import('./view/about'));
 const OceanSoundApp = lazy(() => import('./view/oceansound'));
 
 const AploseSkeleton = lazy(() => import('./components/layout/Skeleton'));
@@ -106,6 +107,7 @@ const AppContent: React.FC = () => {
 
             <Route path="sound-library" element={ <Suspense><SoundLibraryPage/></Suspense> }/>
             <Route path="documentation" element={ <Suspense><DocumentationPage/></Suspense> }/>
+            <Route path="about" element={ <Suspense><AboutPage/></Suspense> }/>
 
             <Route path="account" element={ <Suspense><Account/></Suspense> }/>
 

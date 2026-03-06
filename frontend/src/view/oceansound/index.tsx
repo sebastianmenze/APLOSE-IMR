@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { OceanSoundLayout } from './OceanSoundLayout';
 import { LandingPage } from './pages/LandingPage';
+import { About } from './pages/About';
 import { PassiveAcousticMonitoring } from './pages/PassiveAcousticMonitoring';
 import { Publications } from './pages/Publications';
 import { SoundLibraryPublic } from './pages/SoundLibraryPublic';
@@ -18,6 +19,7 @@ export const OceanSoundApp: React.FC = () => {
     <OceanSoundLayout>
       <Routes>
         <Route index element={<LandingPage />} />
+        <Route path="about" element={<About />} />
         <Route path="pam" element={<PassiveAcousticMonitoring />} />
         <Route path="publications" element={<Publications />} />
         <Route path="sounds" element={<SoundLibraryPublic />} />
