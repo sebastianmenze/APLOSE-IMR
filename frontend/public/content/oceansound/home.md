@@ -1,12 +1,11 @@
-# Welcome to OceanSound
+# Welcome to IMR OceanSound
 
-Explore the underwater soundscape through passive acoustic monitoring.
+This platform was designed to centralize the storage and analysis of passive acoustic data at the Institute of marine research. Here you can find our library of example sound recordings of biological, physical and anthropogenic sound sources and access datasets for collaborative analysis. 
 
-## About the Platform
+Instead of moving terabyte sized acoustic data between PCs, researchers can use this online platform to analyze, annotate and share their datasets. Acoustic recordings are displayed as editable spectrograms (visual representation of sound) that can be annotated to generate sound detection time series and training datasets for automatic detectors. Detection events from machine learning algorithms can be uploaded to the datasets and verified in a collaborative effort. 
 
-OceanSound is a comprehensive platform for passive acoustic monitoring (PAM) of marine environments. This platform enables researchers to analyze and annotate underwater sounds to better understand marine ecosystems and the species that inhabit them.
-
-From whale songs to dolphin clicks, from ship noise to the sounds of healthy coral reefs, acoustic monitoring provides a non-invasive window into the underwater world.
+Here is a screenshot of the spectrogram annotation interface:
+![Description of image](/images/home/t7.png)
 
 ## Platform Features
 
@@ -18,13 +17,9 @@ Browse our collection of annotated marine sounds, from cetacean vocalizations to
 Powerful tools for visualizing spectrograms and annotating acoustic events with precision and efficiency.
 [Access APLOSE](/app/login)
 
-
-![Description of image](/images/home/t7.png)
-
-
 ## Getting Started
 
-1. **Create an Account** - Request access to the APLOSE annotation platform by contacting the administrator.
+1. **Create an Account** - Request access to the APLOSE annotation platform by contacting the administrator (sebastian.menze@hi.no).
 2. **Join a Campaign** - Participate in annotation campaigns organized by research teams.
 3. **Annotate Sounds** - Use our spectrogram tools to identify and label acoustic events.
 4. **Contribute to Science** - Your annotations help build datasets for marine research and conservation.
