@@ -138,8 +138,30 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
   };
 
   const processTextStyles = (text: string): React.ReactNode => {
-    // Process bold and italic
+    // Process bold, italic, and inline code
     const parts: React.ReactNode[] = [];
+
+    // Process inline code first
+    const inlineCodeRegex = /`([^`]+)`/g;
+    let codeMatch;
+    let codeLastIndex = 0;
+    const codeSegments: { start: number; end: number; code: string }[] = [];
+    while ((codeMatch = inlineCodeRegex.exec(text)) !== null) {
+      codeSegments.push({ start: codeMatch.index, end: codeMatch.index + codeMatch[0].length, code: codeMatch[1] });
+    }
+    if (codeSegments.length > 0) {
+      const result: React.ReactNode[] = [];
+      codeLastIndex = 0;
+      for (const seg of codeSegments) {
+        if (seg.start > codeLastIndex) {
+          result.push(processTextStylesNonCode(text.slice(codeLastIndex, seg.start)));
+        }
+        result.push(<code key={`code-${seg.start}`} className={styles.inlineCode}>{seg.code}</code>);
+        codeLastIndex = seg.end;
+      }
+      if (codeLastIndex < text.length) result.push(processTextStylesNonCode(text.slice(codeLastIndex)));
+      return result.length === 1 ? result[0] : <>{result}</>;
+    }
 
     // Simple approach: split by ** for bold and * for italic
     const boldRegex = /\*\*([^*]+)\*\*/g;
@@ -184,6 +206,36 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
     return text;
   };
 
+  // Bold/italic only (no inline code), used after inline code has been extracted
+  const processTextStylesNonCode = (text: string): React.ReactNode => {
+    const parts: React.ReactNode[] = [];
+    const boldRegex = /\*\*([^*]+)\*\*/g;
+    const italicRegex = /\*([^*]+)\*/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = boldRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+      parts.push(<strong key={`bold-${match.index}`}>{match[1]}</strong>);
+      lastIndex = match.index + match[0].length;
+    }
+    if (parts.length > 0) {
+      if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+      return <>{parts}</>;
+    }
+    lastIndex = 0;
+    while ((match = italicRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+      parts.push(<em key={`italic-${match.index}`}>{match[1]}</em>);
+      lastIndex = match.index + match[0].length;
+    }
+    if (parts.length > 0) {
+      if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+      return <>{parts}</>;
+    }
+    return text;
+  };
+
   const flushList = () => {
     if (currentList) {
       const ListTag = currentList.type === 'ul' ? 'ul' : 'ol';
@@ -214,6 +266,24 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmedLine = line.trim();
+
+    // Fenced code block
+    if (trimmedLine.startsWith('```')) {
+      flushList();
+      flushBlockquote();
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      elements.push(
+        <pre key={key++} className={styles.codeBlock}>
+          <code>{codeLines.join('\n')}</code>
+        </pre>
+      );
+      continue;
+    }
 
     // Horizontal rule
     if (trimmedLine === '---' || trimmedLine === '***') {

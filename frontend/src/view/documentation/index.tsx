@@ -8,7 +8,11 @@ import { MarkdownPage } from '../oceansound/components/MarkdownPage';
  * Edit that markdown file to update this page's content.
  */
 export const DocumentationPage: React.FC = () => {
-  return <MarkdownPage contentPath="/content/aplose/documentation.md" />;
+  return (
+    <div style={{ height: '100%', overflowY: 'auto' }}>
+      <MarkdownPage contentPath="/content/aplose/documentation.md" />
+    </div>
+  );
 };
 
 export default DocumentationPage;
