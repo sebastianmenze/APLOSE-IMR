@@ -24,7 +24,6 @@ const AnnotationCampaignPhaseDetail = lazy(() => import('./view/annotation-campa
 const EditAnnotators = lazy(() => import('./view/annotation-campaign/[campaignID]/phase/[phaseType]/edit-annotators'));
 const ImportAnnotations = lazy(() => import('./view/annotation-campaign/[campaignID]/phase/[phaseType]/import-annotations'));
 const AnnotatorPage = lazy(() => import('./view/annotation-campaign/[campaignID]/phase/[phaseType]/spectrogram/[spectrogramID]'));
-const SpectrogramExamplePage = lazy(() => import('./view/spectrogram-example'));
 const SoundLibraryPage = lazy(() => import('./view/sound-library'));
 const DocumentationPage = lazy(() => import('./view/documentation'));
 const OceanSoundApp = lazy(() => import('./view/oceansound'));
@@ -105,7 +104,6 @@ const AppContent: React.FC = () => {
                 </Route>
             </Route>
 
-            <Route path="spectrogram-example" element={ <Suspense><SpectrogramExamplePage/></Suspense> }/>
             <Route path="sound-library" element={ <Suspense><SoundLibraryPage/></Suspense> }/>
             <Route path="documentation" element={ <Suspense><DocumentationPage/></Suspense> }/>
 
