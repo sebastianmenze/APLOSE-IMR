@@ -9,8 +9,6 @@ This portal is running as docker container, the modified APLOSE codebase can be 
 
 For questions about the OceanSound portal and passive acoustic data analysis, please contact sebastian.menze@imr.no.
 
-[https://sebastianmenze.github.io/](https://sebastianmenze.github.io/)
-
 ## Our Mission
 
 We study the acoustic environment of Norwegian and polar waters to understand how marine life communicates, navigates, and responds to human activity. By listening to the ocean, we gain insight into biodiversity, ecosystem health, and the impact of noise pollution.
