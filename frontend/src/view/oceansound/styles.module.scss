@@ -529,6 +529,33 @@ $accent-color: #85B14D;
   color: #e06c75;
 }
 
+.mdTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0 1rem;
+  font-size: 0.95rem;
+
+  th, td {
+    padding: 0.6rem 1rem;
+    text-align: left;
+    border: 1px solid #333;
+  }
+
+  thead th {
+    background: #1e1e1e;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  tbody tr:nth-child(even) td {
+    background: #1a1a1a;
+  }
+
+  tbody td {
+    color: #bbb;
+  }
+}
+
 // Sound Library Public Styles
 .pageIntro {
   color: $text-secondary;

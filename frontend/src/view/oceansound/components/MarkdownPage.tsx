@@ -91,6 +91,8 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
   const elements: React.ReactNode[] = [];
   let currentList: { type: 'ul' | 'ol'; items: string[] } | null = null;
   let blockquoteLines: string[] = [];
+  let tableRows: string[][] = [];   // each entry = array of cell strings for that row
+  let tableHasHeader = false;
   let key = 0;
 
   const processInlineMarkdown = (text: string): React.ReactNode => {
@@ -250,6 +252,45 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
     }
   };
 
+  const parseTableRow = (line: string): string[] =>
+    line.replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+
+  const isSeparatorRow = (cells: string[]) =>
+    cells.every(c => /^:?-+:?$/.test(c));
+
+  const flushTable = () => {
+    if (tableRows.length === 0) return;
+    const rows = tableRows;
+    tableRows = [];
+    tableHasHeader = false;
+    // rows[1] is separator if it exists and looks like one
+    const hasSep = rows.length > 1 && isSeparatorRow(rows[1]);
+    const headerRow = hasSep ? rows[0] : null;
+    const bodyRows = hasSep ? rows.slice(2) : rows;
+    elements.push(
+      <table key={key++} className={styles.mdTable}>
+        {headerRow && (
+          <thead>
+            <tr>
+              {headerRow.map((cell, ci) => (
+                <th key={ci}>{processInlineMarkdown(cell)}</th>
+              ))}
+            </tr>
+          </thead>
+        )}
+        <tbody>
+          {bodyRows.map((row, ri) => (
+            <tr key={ri}>
+              {row.map((cell, ci) => (
+                <td key={ci}>{processInlineMarkdown(cell)}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  };
+
   const flushBlockquote = () => {
     if (blockquoteLines.length > 0) {
       elements.push(
@@ -266,6 +307,16 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmedLine = line.trim();
+
+    // Table row
+    if (trimmedLine.startsWith('|')) {
+      flushList();
+      flushBlockquote();
+      tableRows.push(parseTableRow(trimmedLine));
+      continue;
+    } else if (tableRows.length > 0) {
+      flushTable();
+    }
 
     // Fenced code block
     if (trimmedLine.startsWith('```')) {
@@ -359,8 +410,9 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
     elements.push(<p key={key++}>{processInlineMarkdown(trimmedLine)}</p>);
   }
 
-  // Flush any remaining list or blockquote
+  // Flush any remaining list, table, or blockquote
   flushList();
+  flushTable();
   flushBlockquote();
 
   return <>{elements}</>;
