@@ -121,32 +121,19 @@ For the full list of options see the [APLOSE Audio Processor README](https://git
 
 ---
 
-## Importing into APLOSE
+## Importing into APLOSE (Admin only)
 
 ### Dataset Structure
 
-Place your processed data in the following structure within `volumes/datawork/dataset/`:
+Place your processed data in a new folder in `volumes/datawork/dataset/`. The folder name will aslo act as ID for the dataset.
+
+Open SSH shell on server and run the following script in the docker container
 
 ```
-volumes/datawork/dataset/
-  your_dataset_name/
-    dataset.json
-    data/
-      audio/
-        original/
-          original.json
-    processed/
-      analysis_name/
-        analysis_name.json
+cd /scratch/disk3/a5278/oceansound/APLOSE-IMR 
+docker-compose exec osmose_back poetry run python manage.py import_simple_dataset FOLDERNAME
 ```
 
-### Import via Admin Interface
-
-1. Log in to APLOSE as an administrator
-2. Navigate to **Datasets** in the left panel
-3. Click **Import Dataset**
-4. Select your dataset folder from the dropdown
-5. Review the configuration and click **Import**
 
 ### Verify Import
 
