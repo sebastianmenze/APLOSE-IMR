@@ -8,7 +8,7 @@ import { MarkdownPage } from '@/view/oceansound/components/MarkdownPage';
  * Edit that markdown file to update this page's content.
  */
 export const AboutPage: React.FC = () => {
-  return <MarkdownPage contentPath="/content/aplose/about.md" />;
+  return <MarkdownPage contentPath="/content/oceansound/about.md" />;
 };
 
 export default AboutPage;
