@@ -1,34 +1,44 @@
-# About OceanSound
 
-OceanSound is the public portal for exploring underwater sound recordings collected by the Institute of Marine Research (IMR).
+# About
 
-## Our Mission
+IMR OceanSound is based on the APLOSE platform (https://github.com/Project-OSmOSE/APLOSE) developed at Ifremer. We thank them for sharing their codebase and great ideas. APLOSE (Annotation Platform for Ocean Sound Exploration) was modified and implemented at IMR by Sebastian Menze who also manages IMRs passive acoustic monitoring program in the Southern Ocean. 
 
-We study the acoustic environment of Norwegian waters to understand how marine life communicates, navigate, and respond to human activity. By listening to the ocean, we gain insight into biodiversity, ecosystem health, and the impact of noise pollution.
-
-## The Institute of Marine Research
-
-[The Institute of Marine Research (IMR)](https://www.hi.no/en) is Norway's largest marine science institution. Founded in 1900, IMR carries out research on marine ecosystems, fish stocks, and the marine environment along the Norwegian coast, in the Barents Sea, and in the Norwegian Sea.
-
-Our acoustic monitoring programme has deployed hydrophone arrays at strategic locations along the Norwegian coast to capture continuous recordings of the underwater soundscape.
-
-## Passive Acoustic Monitoring
-
-Passive Acoustic Monitoring (PAM) is a non-invasive technique for studying marine life and the acoustic environment. Hydrophones are deployed on the seafloor or suspended in the water column to record sounds continuously, without disturbing the animals being studied.
-
-We use PAM to:
-
-- Detect and track marine mammals such as whales, dolphins, and porpoises
-- Monitor fish spawning aggregations
-- Assess ambient noise levels from shipping and other human activities
-- Study seasonal changes in the underwater soundscape
-
-## The APLOSE Platform
-
-The sounds you hear on this portal are annotated and managed through **APLOSE** (Annotation Platform for Ocean Sound Exploration), our open-source web platform for collaborative spectrogram annotation.
-
-[Log in to APLOSE](/app/login) to contribute to ongoing annotation campaigns.
+This portal is running as docker container, the modified APLOSE codebase can be found here: https://github.com/sebastianmenze/APLOSE-IMR
 
 ## Contact
 
-For questions about the OceanSound portal or our acoustic monitoring programme, please contact the IMR acoustic team.
+For questions about the OceanSound portal and passive acoustic data analysis, please contact sebastian.menze@imr.no.
+![Description of image](/images/home/smenze.jpg)
+
+
+## Our Mission
+
+We study the acoustic environment of Norwegian and polar waters to understand how marine life communicates, navigates, and responds to human activity. By listening to the ocean, we gain insight into biodiversity, ecosystem health, and the impact of noise pollution.
+
+## License
+
+### Data: 
+
+Unless otherwise noted we remain full copyright of the acoustic data. It may only be used outside this platform with specific permission.
+
+### Code:
+
+MIT License 
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE. 
