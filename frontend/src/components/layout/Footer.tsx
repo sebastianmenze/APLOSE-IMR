@@ -1,8 +1,5 @@
 import React, { useMemo } from 'react';
-import { IonIcon, IonNote } from '@ionic/react';
-import { logoGithub } from 'ionicons/icons/index.js';
-import { Link } from '@/components/ui';
-import { GITHUB_URL } from '@/consts/links';
+import { IonNote } from '@ionic/react';
 import style from './layout.module.scss';
 
 export const Footer: React.FC = () => {
@@ -11,10 +8,6 @@ export const Footer: React.FC = () => {
   return (
     <footer className={ style.footer }>
       <div>
-        <Link href={ GITHUB_URL } target="_blank" color="medium">
-          <IonIcon icon={ logoGithub } slot="start"/>
-          Github
-        </Link>
         <IonNote color="medium">{ version }</IonNote>
       </div>
 
