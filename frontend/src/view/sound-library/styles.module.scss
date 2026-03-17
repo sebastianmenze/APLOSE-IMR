@@ -1,0 +1,376 @@
+.pageContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: #121212;
+}
+
+// Thumbnail Page
+.thumbnailPage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #1a1a1a;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+  }
+}
+
+.pageTitle {
+  color: #fff;
+  font-size: 1.5rem;
+  margin: 0 0 1.5rem 0;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #333;
+}
+
+.thumbnailGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.thumbnailCard {
+  background: #1a1a1a;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid #333;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    border-color: var(--ion-color-primary);
+  }
+}
+
+.thumbnailImage {
+  width: 100%;
+  height: 160px;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .noImage {
+    color: #666;
+    font-size: 0.9rem;
+  }
+}
+
+.thumbnailTitle {
+  padding: 1rem;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-align: center;
+  background: #222;
+  border-top: 1px solid #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Full Page Viewer
+.viewerFullPage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+// Loading and Error states
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 1rem;
+  color: #888;
+}
+
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  color: #888;
+  padding: 2rem;
+
+  h2, h3 {
+    color: #fff;
+    margin-bottom: 1rem;
+  }
+
+  .helpText {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #2a2a2a;
+    border-radius: 4px;
+    font-size: 0.9rem;
+
+    code {
+      display: block;
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: #333;
+      border-radius: 4px;
+      font-family: monospace;
+      color: var(--ion-color-primary);
+    }
+  }
+}
+
+// Viewer Container
+.viewerContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 0.5rem;
+  background: #1a1a1a;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.controlsPanel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: #2a2a2a;
+  border-radius: 6px;
+
+  .controlGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    label {
+      font-size: 0.85rem;
+      color: #ccc;
+      white-space: nowrap;
+    }
+
+    select {
+      padding: 0.4rem 0.75rem;
+      background: #333;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      cursor: pointer;
+
+      &:focus {
+        outline: none;
+        border-color: var(--ion-color-primary);
+      }
+    }
+
+    input[type="range"] {
+      width: 8rem;
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+
+      &::-webkit-slider-runnable-track {
+        height: 6px;
+        background: #444;
+        border-radius: 3px;
+      }
+
+      &::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        background: var(--ion-color-primary);
+        border-radius: 50%;
+        margin-top: -4px;
+        border: none;
+      }
+
+      &::-moz-range-track {
+        height: 6px;
+        background: #444;
+        border-radius: 3px;
+        border: none;
+      }
+
+      &::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        background: var(--ion-color-primary);
+        border-radius: 50%;
+        border: none;
+      }
+    }
+  }
+
+  .buttonGroup {
+    display: flex;
+    gap: 0;
+
+    button {
+      padding: 0.4rem 0.75rem;
+      background: #333;
+      color: #aaa;
+      border: 1px solid #444;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:first-child {
+        border-radius: 4px 0 0 4px;
+      }
+
+      &:last-child {
+        border-radius: 0 4px 4px 0;
+        border-left: none;
+      }
+
+      &:hover {
+        background: #3a3a3a;
+      }
+
+      &.active {
+        background: var(--ion-color-primary);
+        color: #fff;
+        border-color: var(--ion-color-primary);
+      }
+    }
+  }
+
+  .resetButton {
+    padding: 0.4rem 0.75rem;
+    background: #333;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+
+    &:hover {
+      background: #3a3a3a;
+    }
+  }
+
+  .applyButton {
+    padding: 0.4rem 0.85rem;
+    background: #0066cc;
+    color: #fff;
+    border: 1px solid #0055aa;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+
+    &:hover {
+      background: #0077ee;
+    }
+  }
+
+  .backButton {
+    padding: 0.4rem 0.75rem;
+    background: #444;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-right: 0.5rem;
+
+    &:hover {
+      background: #555;
+    }
+  }
+
+  .infoText {
+    display: flex;
+    gap: 1rem;
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: #888;
+
+    span {
+      white-space: nowrap;
+    }
+  }
+}
+
+.plotArea {
+  flex: 1;
+  min-height: 400px;
+  background: #000;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.navigationPanel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #2a2a2a;
+  border-radius: 6px;
+  position: relative;
+  z-index: 10;
+
+  .audioControls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    // Ensure Ionic buttons are clickable
+    ion-button {
+      pointer-events: auto;
+    }
+  }
+}
+
+// File dropdown in the viewer
+.fileDropdown {
+  padding: 0.4rem 0.75rem;
+  background: #333;
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  min-width: 150px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--ion-color-primary);
+  }
+}

@@ -1,0 +1,459 @@
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import Plot from 'react-plotly.js';
+import { AnnotationType, useAnnotationTask } from '@/api';
+import { useWindowHeight, useWindowWidth } from '@/features/Annotator/Canvas';
+import { NetCDFControls } from './NetCDFControls';
+import styles from './NetCDFSpectrogram.module.scss';
+import { useAddAnnotation, selectAllAnnotations, selectAnnotation } from '@/features/Annotator/Annotation';
+import { useAppSelector, useAppDispatch } from '@/features/App';
+import { selectFocusLabel, selectAllLabels } from '@/features/Annotator/Label';
+import { selectFocusConfidence } from '@/features/Annotator/Confidence';
+import { selectIsDrawingEnabled } from '@/features/Annotator/UX';
+import { useAudio } from '@/features/Audio';
+import { focusAnnotation } from '@/features/Annotator/Annotation/slice';
+import { selectFrequencyScaleType, selectPlotlyColorscale, selectPlotlyZmin, selectPlotlyZmax, selectPlotlyFreqMin, selectPlotlyFreqMax } from '@/features/Annotator/VisualConfiguration';
+
+interface NetCDFData {
+  spectrogram: number[][];
+  time: number[];
+  frequency: number[];
+  attributes: Record<string, any>;
+  shape: number[];
+  downsampling: {
+    time_step: number;
+    freq_step: number;
+  };
+}
+
+// APLOSE label colors (from annotation-colors.css)
+const LABEL_COLORS = [
+  'rgb(0, 177, 185)',    // ion-color-0: cyan
+  'rgb(162, 59, 114)',   // ion-color-1: magenta
+  'rgb(241, 143, 1)',    // ion-color-2: orange
+  'rgb(199, 62, 29)',    // ion-color-3: red-orange
+  'rgb(187, 126, 93)',   // ion-color-4: brown
+  'rgb(234, 196, 53)',   // ion-color-5: yellow
+  'rgb(152, 206, 0)',    // ion-color-6: lime green
+  'rgb(103, 97, 168)',   // ion-color-7: purple
+  'rgb(0, 155, 114)',    // ion-color-8: teal
+  'rgb(42, 45, 52)',     // ion-color-9: dark gray
+];
+
+export const NetCDFSpectrogram: React.FC = () => {
+  const { spectrogram } = useAnnotationTask();
+  const width = useWindowWidth();
+  const height = useWindowHeight();
+  const [netcdfData, setNetcdfData] = useState<NetCDFData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Y-axis scale, colorscale, z-range, and freq range from Redux state (persists across files)
+  const yAxisScale = useAppSelector(selectFrequencyScaleType);
+  const colorscale = useAppSelector(selectPlotlyColorscale);
+  const storedZmin = useAppSelector(selectPlotlyZmin);
+  const storedZmax = useAppSelector(selectPlotlyZmax);
+  const storedFreqMin = useAppSelector(selectPlotlyFreqMin);
+  const storedFreqMax = useAppSelector(selectPlotlyFreqMax);
+
+  // Plot reference for managing dragmode
+  const plotRef = useRef<any>(null);
+
+  // Capture label/confidence at start of selection to prevent label jumping
+  const selectionStartLabelRef = useRef<string | null>(null);
+  const selectionStartConfidenceRef = useRef<string | null | undefined>(null);
+
+  // Annotation support
+  const addAnnotation = useAddAnnotation();
+  const focusedLabel = useAppSelector(selectFocusLabel);
+  const focusedConfidence = useAppSelector(selectFocusConfidence);
+  const isDrawingEnabled = useAppSelector(selectIsDrawingEnabled);
+  const allAnnotations = useAppSelector(selectAllAnnotations);
+  const focusedAnnotation = useAppSelector(selectAnnotation);
+  const allLabels = useAppSelector(selectAllLabels);
+  const dispatch = useAppDispatch();
+
+  // Audio support - only for playback indicator and seek
+  const { seek, time: audioTime, duration: audioDuration } = useAudio();
+
+  // Parse NetCDF data from GraphQL response
+  useEffect(() => {
+    if (!spectrogram?.netcdfData) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const data: NetCDFData = JSON.parse(spectrogram.netcdfData);
+      setNetcdfData(data);
+      setLoading(false);
+    } catch (e) {
+      console.error('Error parsing NetCDF data:', e);
+      setError('Failed to parse NetCDF data');
+      setLoading(false);
+    }
+  }, [spectrogram?.netcdfData]);
+
+  // Calculate data range for colorscale
+  const dataRange = useMemo(() => {
+    if (!netcdfData) return { min: 0, max: 0 };
+
+    let min = Infinity;
+    let max = -Infinity;
+
+    for (const row of netcdfData.spectrogram) {
+      for (const val of row) {
+        if (val < min) min = val;
+        if (val > max) max = val;
+      }
+    }
+
+    return { min, max };
+  }, [netcdfData]);
+
+  // Use stored z-range if available, otherwise use data range
+  const zmin = storedZmin ?? dataRange.min;
+  const zmax = storedZmax ?? dataRange.max;
+
+  const plotData = useMemo(() => {
+    if (!netcdfData) return [];
+
+    // Handle reversed colorscales (e.g., Greys_r -> Greys with reversescale: true)
+    const isReversed = colorscale.endsWith('_r');
+    const actualColorscale = isReversed ? colorscale.slice(0, -2) : colorscale;
+
+    return [
+      {
+        type: 'heatmap' as const,
+        z: netcdfData.spectrogram,
+        x: netcdfData.time,
+        y: netcdfData.frequency,
+        colorscale: actualColorscale,
+        reversescale: isReversed,
+        zmin: zmin,
+        zmax: zmax,
+        showscale: false,
+        hovertemplate: 'Time: %{x:.2f}s<br>Frequency: %{y:.0f}Hz<br>Power: %{z:.1f}dB<extra></extra>',
+      },
+    ];
+  }, [netcdfData, colorscale, zmin, zmax]);
+
+  const layout = useMemo(() => {
+    if (!netcdfData) return {};
+
+    const controlsHeight = 80;
+    const plotHeight = height - controlsHeight;
+
+    // Get y-axis range limits for clamping
+    const minFreq = netcdfData.frequency[0];
+    const maxFreq = netcdfData.frequency[netcdfData.frequency.length - 1];
+
+    // Apply user-selected freq range, clamped to data bounds
+    const yMin = storedFreqMin !== null ? Math.max(minFreq, storedFreqMin) : minFreq;
+    const yMax = storedFreqMax !== null ? Math.min(maxFreq, storedFreqMax) : maxFreq;
+
+    const yAxisConfig = yAxisScale === 'log'
+      ? {
+          type: 'log' as const,
+          // For log axis, range is [log10(min), log10(max)]
+          // But data coordinates (heatmap, shapes) remain in actual values
+          range: [Math.log10(yMin), Math.log10(yMax)],
+          autorange: false,
+          fixedrange: false, // Allow zooming but constrain in onRelayout
+        }
+      : {
+          type: 'linear' as const,
+          range: [yMin, yMax],
+          autorange: false,
+          fixedrange: false, // Allow zooming but constrain in onRelayout
+        };
+
+    // Add playback position indicator line
+    const shapes: any[] = [];
+    const annotations: any[] = [];
+
+    // Add playback indicator - only extend from fmin to fmax
+    if (audioDuration && audioTime !== undefined) {
+      shapes.push({
+        type: 'line' as const,
+        x0: audioTime,
+        x1: audioTime,
+        y0: minFreq,
+        y1: maxFreq,
+        yref: 'y' as const,
+        line: {
+          color: '#ff0000',
+          width: 2,
+        },
+        layer: 'above' as const,
+      });
+    }
+
+    // Add annotation boxes as Plotly shapes
+    allAnnotations.forEach((annotation) => {
+      if (annotation.type !== AnnotationType.Box) return;
+      // Check for null/undefined, but allow 0 as a valid value
+      if (annotation.startTime == null || annotation.endTime == null ||
+          annotation.startFrequency == null || annotation.endFrequency == null) return;
+
+      const isFocused = focusedAnnotation?.id === annotation.id;
+
+      // Get label color based on index in allLabels
+      const labelIndex = allLabels.indexOf(annotation.label);
+      const colorIndex = labelIndex >= 0 ? labelIndex % 10 : 0;
+      const labelColor = LABEL_COLORS[colorIndex];
+
+      // Use actual frequency values for both linear and log modes
+      // Plotly handles the log transformation when axis type is 'log'
+      const y0 = Math.max(minFreq, Math.min(maxFreq, annotation.startFrequency));
+      const y1 = Math.max(minFreq, Math.min(maxFreq, annotation.endFrequency));
+
+      shapes.push({
+        type: 'rect' as const,
+        x0: annotation.startTime,
+        x1: annotation.endTime,
+        y0: y0,
+        y1: y1,
+        line: {
+          color: labelColor,
+          width: isFocused ? 3 : 2,
+        },
+        fillcolor: 'rgba(0, 0, 0, 0)', // Transparent fill - only show border
+        layer: 'above' as const,
+        // Store annotation ID for click handling
+        name: `annotation-${annotation.id}`,
+      });
+
+      // Add text label at top left corner of the box
+      // Use actual frequency value - Plotly handles log transformation
+      const textY = Math.max(minFreq, Math.min(maxFreq, annotation.endFrequency));
+
+      annotations.push({
+        x: annotation.startTime,
+        y: textY,
+        xref: 'x' as const,
+        yref: 'y' as const,
+        text: annotation.label,
+        showarrow: false,
+        font: {
+          color: labelColor,
+          size: 12,
+          family: 'Arial, sans-serif',
+        },
+        bgcolor: 'rgba(0, 0, 0, 0.7)',
+        borderpad: 3,
+        xanchor: 'left' as const,
+        yanchor: 'top' as const,
+      });
+    });
+
+    return {
+      width: width,
+      height: plotHeight,
+      margin: { l: 60, r: 20, t: 10, b: 40 },
+      xaxis: {
+        title: { text: 'Time (s)' },
+        showgrid: true,
+        zeroline: false,
+        range: [netcdfData.time[0], netcdfData.time[netcdfData.time.length - 1]],
+      },
+      yaxis: {
+        title: { text: 'Frequency (Hz)' },
+        showgrid: true,
+        zeroline: false,
+        ...yAxisConfig,
+      },
+      shapes: shapes,
+      annotations: annotations,
+      dragmode: isDrawingEnabled ? ('select' as const) : (false as const),
+      hovermode: 'closest' as const,
+      plot_bgcolor: '#000',
+      paper_bgcolor: '#000',
+      font: {
+        color: '#fff',
+      },
+    };
+  }, [netcdfData, width, height, isDrawingEnabled, yAxisScale, audioTime, audioDuration, allAnnotations, focusedAnnotation, allLabels, storedFreqMin, storedFreqMax]);
+
+  const config = useMemo(() => ({
+    displayModeBar: true,
+    displaylogo: false,
+    scrollZoom: false,
+    doubleClick: 'reset' as const,
+    responsive: true,
+    modeBarButtonsToRemove: ['lasso2d'] as any,
+    modeBarButtonsToAdd: [],
+  }), []);
+
+  // Handle plot clicks: focus annotation or seek audio
+  const onPlotClick = useCallback((event: any) => {
+    // Check if click is on the plot (has points data)
+    if (event?.points && event.points.length > 0) {
+      const clickedTime = event.points[0].x;
+      const clickedFreq = event.points[0].y;
+
+      // Check if click is within any annotation bounds
+      for (const annotation of allAnnotations) {
+        if (annotation.type !== AnnotationType.Box) continue;
+        if (!annotation.startTime || !annotation.endTime || !annotation.startFrequency || !annotation.endFrequency) continue;
+
+        const inTimeRange = clickedTime >= annotation.startTime && clickedTime <= annotation.endTime;
+        const inFreqRange = clickedFreq >= annotation.startFrequency && clickedFreq <= annotation.endFrequency;
+
+        if (inTimeRange && inFreqRange) {
+          // Focus this annotation
+          dispatch(focusAnnotation(annotation));
+          return;
+        }
+      }
+
+      // No annotation clicked, seek audio to clicked position
+      if (typeof clickedTime === 'number') {
+        seek(clickedTime);
+      }
+    }
+  }, [seek, allAnnotations, dispatch]);
+
+  // Capture label/confidence when mousedown on plot (start of drag/selection)
+  const onPlotMouseDown = useCallback(() => {
+    if (isDrawingEnabled && focusedLabel) {
+      selectionStartLabelRef.current = focusedLabel;
+      selectionStartConfidenceRef.current = focusedConfidence;
+    }
+  }, [isDrawingEnabled, focusedLabel, focusedConfidence]);
+
+  // Handle box selection to create annotations
+  const onSelected = useCallback((event: any) => {
+    if (!event || !event.range || !isDrawingEnabled) return;
+
+    // Use the label captured at selection start, not the current focused label
+    const labelToUse = selectionStartLabelRef.current;
+    const confidenceToUse = selectionStartConfidenceRef.current;
+
+    if (!labelToUse) {
+      console.warn('No label was selected when starting the annotation');
+      return;
+    }
+
+    const { x, y } = event.range;
+
+    // Plotly returns actual values even when axis type is 'log'
+    const startTime = Math.min(x[0], x[1]);
+    const endTime = Math.max(x[0], x[1]);
+    const startFrequency = Math.min(y[0], y[1]);
+    const endFrequency = Math.max(y[0], y[1]);
+
+    // Only create annotation if box has meaningful size
+    if (endTime - startTime > 0.01 && endFrequency - startFrequency > 1) {
+      addAnnotation({
+        type: AnnotationType.Box,
+        startTime,
+        endTime,
+        startFrequency,
+        endFrequency,
+        label: labelToUse,
+        confidence: confidenceToUse ?? undefined,
+      });
+    }
+
+    // Clear the stored values
+    selectionStartLabelRef.current = null;
+    selectionStartConfidenceRef.current = null;
+  }, [addAnnotation, isDrawingEnabled]);
+
+  // Restore dragmode after zoom/pan operations and enforce y-axis range limits
+  const onRelayout = useCallback((event: any) => {
+    if (!plotRef.current || !netcdfData) return;
+
+    const plotlyDiv = plotRef.current.el;
+    if (!plotlyDiv) return;
+
+    const Plotly = (window as any).Plotly;
+    if (!Plotly) return;
+
+    const updates: any = {};
+    let needsUpdate = false;
+
+    // Get the frequency bounds
+    const minFreq = netcdfData.frequency[0];
+    const maxFreq = netcdfData.frequency[netcdfData.frequency.length - 1];
+
+    // Check if y-axis range was modified (zoom/pan)
+    if (event && (event['yaxis.range[0]'] !== undefined || event['yaxis.range'] !== undefined)) {
+      const currentYAxis = plotlyDiv.layout?.yaxis;
+      if (currentYAxis?.type === 'log') {
+        // In log mode, range is in log10 values
+        const minLogFreq = Math.log10(minFreq);
+        const maxLogFreq = Math.log10(maxFreq);
+
+        const currentRange = currentYAxis.range || [minLogFreq, maxLogFreq];
+        const newRange = [
+          Math.max(minLogFreq, Math.min(maxLogFreq, currentRange[0])),
+          Math.max(minLogFreq, Math.min(maxLogFreq, currentRange[1]))
+        ];
+
+        if (newRange[0] !== currentRange[0] || newRange[1] !== currentRange[1]) {
+          updates['yaxis.range'] = newRange;
+          needsUpdate = true;
+        }
+      } else {
+        // Linear mode
+        const currentRange = currentYAxis.range || [minFreq, maxFreq];
+        const newRange = [
+          Math.max(minFreq, Math.min(maxFreq, currentRange[0])),
+          Math.max(minFreq, Math.min(maxFreq, currentRange[1]))
+        ];
+
+        if (newRange[0] !== currentRange[0] || newRange[1] !== currentRange[1]) {
+          updates['yaxis.range'] = newRange;
+          needsUpdate = true;
+        }
+      }
+    }
+
+    // Restore dragmode to 'select' if drawing is enabled
+    if (isDrawingEnabled && plotlyDiv.layout?.dragmode !== 'select') {
+      updates.dragmode = 'select';
+      needsUpdate = true;
+    }
+
+    // Apply updates if needed
+    if (needsUpdate) {
+      try {
+        Plotly.relayout(plotlyDiv, updates);
+      } catch (e) {
+        console.error('Error updating plot layout:', e);
+      }
+    }
+  }, [isDrawingEnabled, netcdfData]);
+
+  if (loading) {
+    return <div className={styles.loading}>Loading spectrogram...</div>;
+  }
+
+  if (error || !netcdfData) {
+    return <div className={styles.error}>{error || 'No NetCDF data available'}</div>;
+  }
+
+  return (
+    <div className={styles.netcdfContainer}>
+      <NetCDFControls
+        dataMin={dataRange.min}
+        dataMax={dataRange.max}
+        freqMin={netcdfData.frequency[0]}
+        freqMax={netcdfData.frequency[netcdfData.frequency.length - 1]}
+      />
+      <div className={styles.plotContainer} onMouseDown={onPlotMouseDown}>
+        <Plot
+          ref={plotRef}
+          data={plotData}
+          layout={layout}
+          config={config}
+          style={{ width: '100%', height: '100%' }}
+          onClick={onPlotClick}
+          onSelected={onSelected}
+          onRelayout={onRelayout}
+        />
+      </div>
+    </div>
+  );
+};

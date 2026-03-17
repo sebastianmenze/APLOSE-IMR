@@ -1,0 +1,506 @@
+.pageContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: #121212;
+}
+
+.exampleContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px;
+  gap: 20px;
+  overflow: auto;
+}
+
+.header {
+  text-align: center;
+  padding: 20px;
+  background: var(--ion-color-light);
+  border-radius: 8px;
+
+  h1 {
+    margin: 0 0 10px 0;
+    font-size: 24px;
+    color: var(--ion-color-primary);
+  }
+
+  p {
+    margin: 5px 0;
+    color: var(--ion-color-medium);
+    font-size: 14px;
+  }
+
+  .note {
+    margin-top: 15px;
+    padding: 10px;
+    background: var(--ion-color-warning-tint);
+    border-radius: 4px;
+    font-size: 13px;
+
+    code {
+      padding: 2px 6px;
+      background: var(--ion-color-light);
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+  }
+}
+
+.spectrogramContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 500px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  padding: 15px;
+}
+
+// NetCDF Viewer styles
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  gap: 15px;
+
+  p {
+    color: var(--ion-color-medium);
+  }
+}
+
+.errorContainer {
+  padding: 30px;
+  text-align: center;
+  color: var(--ion-color-danger);
+
+  h3 {
+    margin: 0 0 15px 0;
+  }
+
+  p {
+    margin: 10px 0;
+  }
+
+  .helpText {
+    margin-top: 20px;
+    padding: 15px;
+    background: var(--ion-color-light);
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--ion-color-medium);
+
+    code {
+      display: block;
+      margin-top: 10px;
+      padding: 8px;
+      background: var(--ion-color-light-shade);
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 12px;
+      word-break: break-all;
+    }
+  }
+}
+
+.plotContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 15px;
+}
+
+.controls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  padding: 10px;
+  background: var(--ion-color-light);
+  border-radius: 4px;
+  flex-wrap: wrap;
+
+  .control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ion-color-dark);
+    }
+
+    select,
+    input {
+      padding: 5px 10px;
+      border: 1px solid var(--ion-color-medium);
+      border-radius: 4px;
+      font-size: 13px;
+
+      &:focus {
+        outline: none;
+        border-color: var(--ion-color-primary);
+      }
+    }
+
+    input[type="number"] {
+      width: 80px;
+    }
+  }
+
+  .resetButton {
+    padding: 6px 12px;
+    background: var(--ion-color-primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+
+    &:hover {
+      background: var(--ion-color-primary-shade);
+    }
+  }
+}
+
+.plot {
+  flex: 1;
+  min-height: 400px;
+  background: white;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.info {
+  padding: 10px;
+  background: var(--ion-color-light);
+  border-radius: 4px;
+  font-size: 13px;
+
+  p {
+    margin: 5px 0;
+    color: var(--ion-color-dark);
+
+    strong {
+      color: var(--ion-color-primary);
+    }
+  }
+}
+
+// DataPNGViewer styles - dark theme matching annotation page
+.viewerContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 0.5rem;
+  background: #1a1a1a;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.controlsPanel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: #2a2a2a;
+  border-radius: 6px;
+
+  .controlGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    label {
+      font-size: 0.85rem;
+      color: #ccc;
+      white-space: nowrap;
+    }
+
+    select {
+      padding: 0.4rem 0.75rem;
+      background: #333;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      cursor: pointer;
+
+      &:focus {
+        outline: none;
+        border-color: var(--ion-color-primary);
+      }
+    }
+
+    input[type="range"] {
+      width: 8rem;
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+
+      &::-webkit-slider-runnable-track {
+        height: 6px;
+        background: #444;
+        border-radius: 3px;
+      }
+
+      &::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        background: var(--ion-color-primary);
+        border-radius: 50%;
+        margin-top: -4px;
+        border: none;
+      }
+
+      &::-moz-range-track {
+        height: 6px;
+        background: #444;
+        border-radius: 3px;
+        border: none;
+      }
+
+      &::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        background: var(--ion-color-primary);
+        border-radius: 50%;
+        border: none;
+      }
+    }
+  }
+
+  .buttonGroup {
+    display: flex;
+    gap: 0;
+
+    button {
+      padding: 0.4rem 0.75rem;
+      background: #333;
+      color: #aaa;
+      border: 1px solid #444;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:first-child {
+        border-radius: 4px 0 0 4px;
+      }
+
+      &:last-child {
+        border-radius: 0 4px 4px 0;
+        border-left: none;
+      }
+
+      &:hover {
+        background: #3a3a3a;
+      }
+
+      &.active {
+        background: var(--ion-color-primary);
+        color: #fff;
+        border-color: var(--ion-color-primary);
+      }
+    }
+  }
+
+  .resetButton {
+    padding: 0.4rem 0.75rem;
+    background: #333;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+      background: #3a3a3a;
+    }
+  }
+
+  .infoText {
+    display: flex;
+    gap: 1rem;
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: #888;
+
+    span {
+      white-space: nowrap;
+    }
+  }
+}
+
+.plotArea {
+  flex: 1;
+  min-height: 400px;
+  background: #000;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.navigationPanel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #2a2a2a;
+  border-radius: 6px;
+  position: relative;
+  z-index: 10;
+
+  .audioControls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    // Ensure Ionic buttons are clickable
+    ion-button {
+      pointer-events: auto;
+    }
+
+    .playButton {
+      width: 40px;
+      height: 40px;
+      background: var(--ion-color-primary);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+
+      &:hover {
+        background: var(--ion-color-primary-shade);
+      }
+    }
+
+    .timeDisplay {
+      font-size: 0.9rem;
+      color: #ccc;
+      font-family: monospace;
+    }
+  }
+
+  .navButtons {
+    display: flex;
+    gap: 0.5rem;
+
+    .navButton {
+      padding: 0.5rem 1rem;
+      background: #333;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s;
+
+      &:hover:not(:disabled) {
+        background: #3a3a3a;
+      }
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
+// File selector styles
+.fileSelector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #2a2a2a;
+  border-radius: 6px;
+  max-height: 150px;
+  overflow-y: auto;
+
+  .fileButton {
+    padding: 0.4rem 0.75rem;
+    background: #333;
+    color: #ccc;
+    border: 1px solid #444;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #3a3a3a;
+    }
+
+    &.active {
+      background: var(--ion-color-primary);
+      color: #fff;
+      border-color: var(--ion-color-primary);
+    }
+  }
+}
+
+.noFiles {
+  text-align: center;
+  padding: 2rem;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+// Viewer wrapper
+.viewerWrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+// Recording selector
+.recordingSelector {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #2a2a2a;
+  border-radius: 6px;
+
+  label {
+    font-size: 0.9rem;
+    color: #ccc;
+    font-weight: 500;
+  }
+
+  select {
+    flex: 1;
+    max-width: 400px;
+    padding: 0.5rem 0.75rem;
+    background: #333;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+
+    &:focus {
+      outline: none;
+      border-color: var(--ion-color-primary);
+    }
+  }
+}

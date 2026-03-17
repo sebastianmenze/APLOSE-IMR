@@ -29,10 +29,10 @@ INSTALLED_APPS = [
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
     "graphene_django",
+    "django_filters",
     "rest_framework",
     "drf_spectacular",
     "backend.api.apps.ApiConfig",
-    "backend.osmosewebsite.apps.OsmoseWebsiteConfig",
     "backend.aplose.apps.AploseConfig",
     "tinymce",
     "django_admin_multiple_choice_list_filter",
@@ -141,7 +141,8 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "DEFAULT_PAGINATION_CLASS": "backend.osmosewebsite.pagination.OsmosePagination",
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
         "backend.utils.filters.ModelFilter",
@@ -165,7 +166,9 @@ SPECTACULAR_SETTINGS = {
 FIXTURE_DIRS = (
     BASE_DIR / "backend/tests/fixtures",
     BASE_DIR / "backend/api/tests/fixtures",
-    BASE_DIR / "backend/osmosewebsite/tests/fixtures",
+    BASE_DIR / "backend/api/tests/fixtures/annotation",
+    BASE_DIR / "backend/api/tests/fixtures/common",
+    BASE_DIR / "backend/api/tests/fixtures/data",
 )
 
 # TINYMCE Configuration
@@ -184,4 +187,5 @@ TINYMCE_DEFAULT_CONFIG = {
 GRAPHENE = {
     "SCHEMA": "backend.schema.schema",
     "MIDDLEWARE": ["graphene_django.debug.middleware.DjangoDebugMiddleware"],
+    "TESTING_ENDPOINT": "/api/graphql/public",
 }

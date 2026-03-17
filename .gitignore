@@ -3,9 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Docker volumes folder
-volumes
-
 # Logs
 logs
 *.log
@@ -91,3 +88,6 @@ dist-ssr
 .tool-versions
 
 venv
+
+# dont push data to server
+/volumes

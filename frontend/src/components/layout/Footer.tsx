@@ -1,9 +1,5 @@
-import React, { useMemo } from "react";
-import { IonIcon, IonNote } from "@ionic/react";
-import { logoGithub, mailOutline } from "ionicons/icons";
-import { Link } from "@/components/ui/Link";
-import { CONTACT_MAIL, CONTACT_URI, GITHUB_URL, OSMOSE_URL } from "@/consts/links";
-import logo from "/images/ode_logo_192x192.png";
+import React, { useMemo } from 'react';
+import { IonNote } from '@ionic/react';
 import style from './layout.module.scss';
 
 export const Footer: React.FC = () => {
@@ -12,22 +8,10 @@ export const Footer: React.FC = () => {
   return (
     <footer className={ style.footer }>
       <div>
-        <Link href={ GITHUB_URL } target='_blank' color='medium'>
-          <IonIcon icon={ logoGithub } slot='start'/>
-          Github
-        </Link>
-        <IonNote color='medium'>{ version }</IonNote>
+        <IonNote color="medium">{ version }</IonNote>
       </div>
 
-      <div className={ style.proposition }>
-        <p>Proposed by</p>
-        <Link href={ OSMOSE_URL }>OSmOSE <img src={ logo } alt="OSmOSE"/></Link>
-      </div>
-
-      <Link href={ CONTACT_URI } color='medium'>
-        <IonIcon icon={ mailOutline } slot='end'/>
-        { CONTACT_MAIL }
-      </Link>
+      <div></div>
     </footer>
   );
 };

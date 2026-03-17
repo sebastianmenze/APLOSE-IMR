@@ -1,5 +1,4 @@
-import React, { Fragment } from 'react';
-import { Provider } from "react-redux";
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 import './css/bootstrap-4.1.3.min.css';
@@ -10,25 +9,34 @@ import './css/app.css';
 
 import { IonApp, setupIonicReact } from '@ionic/react';
 
-import { AppStore, useAppSelector } from "@/service/app";
+import { StoreProvider, useAppSelector } from '@/features/App';
 
-import { DatasetList } from '@/view/dataset';
-import { AnnotationCampaignDetail, AnnotationCampaignList } from "@/view/campaign";
-import { AnnotationCampaignDetailInfo, AnnotationCampaignPhaseDetail } from "@/view/campaign/details";
-import { Home } from "@/view/home/Home.tsx";
-import { Account, Login } from '@/view/auth';
-import { AnnotatorPage } from "@/view/annotator/AnnotatorPage.tsx";
-import { useLoadEventService } from "@/service/events";
-import { CreateCampaign } from "@/view/campaign/create/CreateCampaign.tsx";
-import { EditAnnotators } from "@/view/campaign/edit/EditAnnotators.tsx";
-import { ImportAnnotations } from "@/view/campaign/edit/ImportAnnotations";
-import { AlertProvider } from "@/service/ui/alert";
-import { SqlQuery } from "@/view/admin/sql/SqlQuery.tsx";
-import { AploseSkeleton } from "@/components/layout";
-import { selectCurrentUser } from "@/service/api/user.ts";
-import { selectIsConnected } from "@/service/slices/auth.ts";
-import { ReactFlowProvider } from "@xyflow/react";
-import { OntologyPage, OntologyTab } from "@/features/ontology";
+const Login = lazy(() => import('./view/auth/Login'));
+const Account = lazy(() => import('./view/account'));
+const SqlQuery = lazy(() => import('./view/admin/sql'));
+const DatasetList = lazy(() => import('./view/dataset'));
+const DatasetDetail = lazy(() => import('./view/dataset/[datasetID]'));
+const AnnotationCampaignList = lazy(() => import('./view/annotation-campaign'));
+const NewAnnotationCampaign = lazy(() => import('./view/annotation-campaign/new'));
+const AnnotationCampaignDetail = lazy(() => import('./view/annotation-campaign/[campaignID]'));
+const AnnotationCampaignInfo = lazy(() => import('./view/annotation-campaign/[campaignID]/InfoTab'));
+const AnnotationCampaignPhaseDetail = lazy(() => import('./view/annotation-campaign/[campaignID]/phase/[phaseType]'));
+const EditAnnotators = lazy(() => import('./view/annotation-campaign/[campaignID]/phase/[phaseType]/edit-annotators'));
+const ImportAnnotations = lazy(() => import('./view/annotation-campaign/[campaignID]/phase/[phaseType]/import-annotations'));
+const AnnotatorPage = lazy(() => import('./view/annotation-campaign/[campaignID]/phase/[phaseType]/spectrogram/[spectrogramID]'));
+const SoundLibraryPage = lazy(() => import('./view/sound-library'));
+const DocumentationPage = lazy(() => import('./view/documentation'));
+const AboutPage = lazy(() => import('./view/about'));
+const OceanSoundApp = lazy(() => import('./view/oceansound'));
+
+const AploseSkeleton = lazy(() => import('./components/layout/Skeleton'));
+
+import { useLoadEventService } from '@/features/UX/Events';
+import { AlertProvider } from '@/components/ui/Alert';
+import { selectIsConnected } from '@/features/Auth';
+import { ReactFlowProvider } from '@xyflow/react';
+import { selectCurrentUser } from '@/api';
+import { AudioProvider } from '@/features/Audio';
 
 
 setupIonicReact({
@@ -37,17 +45,19 @@ setupIonicReact({
 });
 
 export const App: React.FC = () => (
-  <Provider store={ AppStore }>
-    <AlertProvider>
-      <ReactFlowProvider>
-        <IonApp>
-          <BrowserRouter basename='/app/'>
-            <AppContent/>
-          </BrowserRouter>
-        </IonApp>
-      </ReactFlowProvider>
-    </AlertProvider>
-  </Provider>
+  <StoreProvider>
+    <IonApp>
+      <BrowserRouter basename="/">
+        <AudioProvider>
+          <AlertProvider>
+            <ReactFlowProvider>
+              <AppContent/>
+            </ReactFlowProvider>
+          </AlertProvider>
+        </AudioProvider>
+      </BrowserRouter>
+    </IonApp>
+  </StoreProvider>
 )
 
 const AppContent: React.FC = () => {
@@ -55,64 +65,66 @@ const AppContent: React.FC = () => {
 
   const isConnected = useAppSelector(selectIsConnected)
   const currentUser = useAppSelector(selectCurrentUser)
+
   const from = useLocation()
 
   return (
     <Routes>
+      {/* Root redirects to OceanSound landing page */}
+      <Route index element={ <Navigate to="/oceansound" replace/> }/>
 
-      <Route index element={ <Home/> }/>
-      <Route path='login' element={ <Login/> }/>
+      {/* OceanSound Public Landing Pages */}
+      <Route path="oceansound/*" element={ <Suspense><OceanSoundApp/></Suspense> }/>
 
-      { isConnected && <Fragment>
+      {/* APLOSE App Routes */}
+      <Route path="app">
+        <Route index element={ <Navigate to="/app/login" replace/> }/>
+        <Route path="login" element={ <Suspense><Login/></Suspense> }/>
 
-          <Route path='dataset' element={ <AploseSkeleton/> }>
-              <Route index element={ <DatasetList/> }/>
-          </Route>
+        { isConnected && <Route element={ <Suspense><AploseSkeleton/></Suspense> }>
 
-          <Route path='annotation-campaign' element={ <AploseSkeleton/> }>
-              <Route index element={ <AnnotationCampaignList/> }/>
-              <Route path='new' element={ <CreateCampaign/> }/>
+            <Route path="dataset">
+                <Route index element={ <Suspense><DatasetList/></Suspense> }/>
+                <Route path=":datasetID" element={ <Suspense><DatasetDetail/></Suspense> }/>
+            </Route>
 
-              <Route path=':campaignID'>
-                  <Route element={ <AnnotationCampaignDetail/> }>
-                      <Route index element={ <AnnotationCampaignDetailInfo/> }/>
-                      <Route path='phase/:phaseID' element={ <AnnotationCampaignPhaseDetail/> }/>
-                  </Route>
-
-                  <Route path='phase/:phaseID'>
-                      <Route path='edit-annotators' element={ <EditAnnotators/> }/>
-                      <Route path='import-annotations' element={ <ImportAnnotations/> }/>
-                  </Route>
-              </Route>
-          </Route>
-
-          <Route path='annotation-campaign/:campaignID/phase/:phaseID/file/:fileID'
-                 element={ <AnnotatorPage/> }/>
-
-          <Route element={ <AploseSkeleton/> }>
-              <Route path='account' element={ <Account/> }/>
-          </Route>
-
-        { currentUser?.is_superuser &&
-            <Route path='admin' element={ <AploseSkeleton/> }>
-                <Route path='sql' element={ <SqlQuery/> }/>
-                <Route path='ontology' element={ <OntologyPage/> }>
-                    <Route path='source'>
-                        <Route index element={ <OntologyTab/> }/>
-                        <Route path=':id' element={ <OntologyTab/> }/>
+            <Route path="annotation-campaign">
+                <Route index element={ <Suspense><AnnotationCampaignList/></Suspense> }/>
+                <Route path="new" element={ <Suspense><NewAnnotationCampaign/></Suspense> }/>
+                <Route path=":campaignID">
+                    <Route element={ <Suspense><AnnotationCampaignDetail/></Suspense> }>
+                        <Route index element={ <Suspense><AnnotationCampaignInfo/></Suspense> }/>
+                        <Route path="phase/:phaseType" element={ <Suspense><AnnotationCampaignPhaseDetail/></Suspense> }/>
                     </Route>
-                    <Route path='sound'>
-                        <Route index element={ <OntologyTab/> }/>
-                        <Route path=':id' element={ <OntologyTab/> }/>
+                    <Route path="phase/:phaseType">
+                        <Route path="edit-annotators" element={ <Suspense><EditAnnotators/></Suspense> }/>
+                        <Route path="import-annotations" element={ <Suspense><ImportAnnotations/></Suspense> }/>
+
+                        <Route path="spectrogram/:spectrogramID" element={ <Suspense><AnnotatorPage/></Suspense> }/>
                     </Route>
                 </Route>
             </Route>
-        }
 
-          <Route path="*" element={ <Navigate to="/annotation-campaign" replace state={ { from } }/> }/>
-      </Fragment> }
+            <Route path="sound-library" element={ <Suspense><SoundLibraryPage/></Suspense> }/>
+            <Route path="documentation" element={ <Suspense><DocumentationPage/></Suspense> }/>
+            <Route path="about" element={ <Suspense><AboutPage/></Suspense> }/>
 
-      <Route path="*" element={ <Navigate to="/login" replace state={ { from } }/> }/>
+            <Route path="account" element={ <Suspense><Account/></Suspense> }/>
+
+          { currentUser?.isSuperuser &&
+              <Route path="admin">
+                  <Route path="sql" element={ <Suspense><SqlQuery/></Suspense> }/>
+              </Route> }
+
+            <Route path="" element={ <Navigate to="/app/annotation-campaign" replace state={ { from } }/> }/>
+        </Route> }
+
+        {/* Redirect unauthenticated users to login */}
+        <Route path="*" element={ <Navigate to="/app/login" replace state={ { from } }/> }/>
+      </Route>
+
+      {/* Fallback - redirect to OceanSound */}
+      <Route path="*" element={ <Navigate to="/oceansound" replace/> }/>
     </Routes>
   )
 }

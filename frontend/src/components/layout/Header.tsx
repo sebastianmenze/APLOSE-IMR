@@ -1,12 +1,10 @@
-import React, { ReactNode, useState } from "react";
-import { DocumentationButton } from "@/components/ui";
-import { IonButton, IonIcon } from "@ionic/react";
-import { closeOutline, menuOutline } from "ionicons/icons";
-import { useNavigate } from "react-router-dom";
-import logo from "/images/ode_logo_192x192.png";
+import React, { ReactNode, useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { IonButton, IonIcon } from '@ionic/react';
+import { closeOutline, menuOutline } from 'ionicons/icons/index.js';
+import { useAppSelector } from '@/features/App';
+import { selectIsConnected } from '@/features/Auth';
 import styles from './layout.module.scss'
-import { useAppSelector } from "@/service/app.ts";
-import { selectCurrentUser } from "@/service/api/user.ts";
 
 export const Header: React.FC<{
   buttons?: ReactNode;
@@ -16,41 +14,36 @@ export const Header: React.FC<{
 }> = ({ children, buttons, size, canNavigate }) => {
 
   const [ isOpen, setIsOpen ] = useState<boolean>(false);
-  const user = useAppSelector(selectCurrentUser)
-  const navigate = useNavigate ();
+  const isConnected = useAppSelector(selectIsConnected)
+  const navigate = useNavigate();
 
-  function toggleOpening() {
-    setIsOpen(previous => !previous);
-  }
+  const toggleOpening = useCallback(() => setIsOpen(previous => !previous), [])
 
-  async function onAPLOSEClick() {
-    if (user) {
+  const onAPLOSEClick = useCallback(async () => {
+    if (isConnected) {
       if (!canNavigate || await canNavigate()) {
-        navigate(`/annotation-campaign/`);
+        navigate(`/app/annotation-campaign/`);
       }
     } else {
-      navigate(`/`);
+      navigate(`/app/login`);
     }
-  }
+  }, [ isConnected, canNavigate, navigate ])
 
   return (
     <header
       className={ [ styles.header, isOpen ? styles.opened : styles.closed, size === 'small' ? styles.small : '', children ? styles.withInfo : '' ].join(' ') }>
       <div className={ styles.title } onClick={ onAPLOSEClick }>
-        <img src={ logo } alt="OSmOSE"/>
         <h1>APLOSE</h1>
       </div>
 
-      <IonButton fill='outline' color='medium'
+      <IonButton fill="outline" color="medium"
                  className={ styles.toggle } onClick={ toggleOpening }>
-        <IonIcon icon={ isOpen ? closeOutline : menuOutline } slot='icon-only'/>
+        <IonIcon icon={ isOpen ? closeOutline : menuOutline } slot="icon-only"/>
       </IonButton>
 
       { children && <div className={ styles.info }>{ children }</div> }
 
       <div className={ styles.links }>
-        <DocumentationButton size={ size }/>
-
         { buttons }
 
       </div>

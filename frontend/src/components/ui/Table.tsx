@@ -66,7 +66,7 @@ export const TableHead: React.FC<CellProps> = ({
                 position: topSticky || leftSticky ? 'sticky' : undefined,
                 top: topSticky ? '0' : undefined,
                 left: leftSticky ? '0' : undefined,
-                backgroundColor: topSticky || leftSticky ? 'white' : undefined,
+                backgroundColor: topSticky || leftSticky ? '#1a1a1a' : undefined,
                 zIndex: leftSticky ? 2 : undefined,
               } }
               onClick={ onClick }>
@@ -94,7 +94,7 @@ export const TableContent: React.FC<CellProps> = ({
               style={ {
                 position: leftSticky ? 'sticky' : undefined,
                 left: leftSticky ? '0' : undefined,
-                backgroundColor: leftSticky ? 'white' : undefined,
+                backgroundColor: leftSticky ? '#1a1a1a' : undefined,
               } }
               onClick={ onClick }>
     { children }
