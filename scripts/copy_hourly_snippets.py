@@ -64,6 +64,8 @@ def run(src: str, dst: str, interval_h: int, buffer_s: float, dry_run: bool) -> 
     snippet_count = 0
     file_count = 0
 
+    print(wav_files)
+
     for wav in wav_files:
         dt = parse_datetime(wav)
         if dt is None:
