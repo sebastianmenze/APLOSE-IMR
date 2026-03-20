@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """
 Copy APLOSE dataset snippets (WAV + PNG + JSON) whose start time falls
-within a buffer window around full-hour marks.
+within a buffer window around periodic time marks.
+
+The marks are defined by a start time (HH:MM) and an interval in hours.
+Example: --start 00:30 --interval 2  →  marks at 00:30, 02:30, 04:30, …
 
 Examples
 --------
-# Dry-run: every hour, ±40 s buffer
+# Default: marks every 1 h from 00:00 (i.e. 00:00, 01:00, …), ±40 s buffer
 python copy_hourly_snippets.py /data/src /data/dst --dry-run
 
-# Copy snippets near 00:00, 01:00, 02:00 ... with ±40 s window
-python copy_hourly_snippets.py /data/src /data/dst
+# Marks at 00:30, 01:30, 02:30 … with ±40 s buffer
+python copy_hourly_snippets.py /data/src /data/dst --start 00:30
 
-# Copy snippets near 00:00, 02:00, 04:00 ... (every 2 h) with ±60 s window
-python copy_hourly_snippets.py /data/src /data/dst --interval 2 --buffer 60
+# Marks at 00:30, 02:30, 04:30 … with ±60 s buffer
+python copy_hourly_snippets.py /data/src /data/dst --start 00:30 --interval 2 --buffer 60
 """
 
 import argparse
@@ -37,12 +40,26 @@ def parse_datetime(path: str) -> datetime | None:
         return None
 
 
-def near_hour_mark(dt: datetime, interval_h: int, buffer_s: float) -> bool:
-    """True if dt is within buffer_s seconds of any (interval_h)-hourly mark."""
+def parse_start_time(value: str) -> int:
+    """Parse 'HH:MM' into total seconds since midnight."""
+    try:
+        h, m = value.split(":")
+        return int(h) * 3600 + int(m) * 60
+    except (ValueError, AttributeError):
+        raise argparse.ArgumentTypeError(f"Invalid time format '{value}', expected HH:MM")
+
+
+def near_mark(dt: datetime, start_s: int, interval_s: int, buffer_s: float) -> bool:
+    """True if dt is within buffer_s seconds of any periodic mark.
+
+    Marks occur at  start_s, start_s + interval_s, start_s + 2*interval_s, …
+    (wrapping around midnight every 24 h).
+    """
     seconds_since_midnight = dt.hour * 3600 + dt.minute * 60 + dt.second
-    interval_s = interval_h * 3600
-    remainder = seconds_since_midnight % interval_s        # distance past last mark
-    distance = min(remainder, interval_s - remainder)      # distance to nearest mark
+    # Shift so that marks land on multiples of interval_s
+    shifted = (seconds_since_midnight - start_s) % 86400
+    remainder = shifted % interval_s          # seconds past the last mark
+    distance = min(remainder, interval_s - remainder)  # distance to nearest mark
     return distance <= buffer_s
 
 
@@ -55,7 +72,8 @@ def associated_files(wav_path: str) -> list[str]:
     return files
 
 
-def run(src: str, dst: str, interval_h: int, buffer_s: float, dry_run: bool) -> None:
+def run(src: str, dst: str, start_s: int, interval_h: float, buffer_s: float, dry_run: bool) -> None:
+    interval_s = int(interval_h * 3600)
     wav_files = sorted(glob.glob(os.path.join(src, "**", "*.wav"), recursive=True))
     if not wav_files:
         print(f"No WAV files found in {src}")
@@ -72,7 +90,7 @@ def run(src: str, dst: str, interval_h: int, buffer_s: float, dry_run: bool) -> 
             print(f"[SKIP] No datetime in filename: {os.path.basename(wav)}")
             continue
 
-        if not near_hour_mark(dt, interval_h, buffer_s):
+        if not near_mark(dt, start_s, interval_s, buffer_s):
             continue
 
         files = associated_files(wav)
@@ -97,17 +115,31 @@ def run(src: str, dst: str, interval_h: int, buffer_s: float, dry_run: bool) -> 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Copy APLOSE snippets near full-hour marks."
+        description="Copy APLOSE snippets near periodic time marks.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  Every hour from 00:00 (default):\n"
+            "    %(prog)s src/ dst/\n\n"
+            "  Marks at 00:30, 01:30, 02:30 …:\n"
+            "    %(prog)s src/ dst/ --start 00:30\n\n"
+            "  Marks at 00:30, 02:30, 04:30 … with ±60 s buffer:\n"
+            "    %(prog)s src/ dst/ --start 00:30 --interval 2 --buffer 60\n"
+        ),
     )
     parser.add_argument("src", help="Source APLOSE dataset folder")
     parser.add_argument("dst", help="Destination folder")
     parser.add_argument(
-        "--interval", type=int, default=1, choices=[1, 2],
-        help="Hour interval: 1 = every hour, 2 = every 2 h (default: 1)",
+        "--start", default="00:00", metavar="HH:MM",
+        help="First mark time of day, e.g. 00:30 (default: 00:00)",
+    )
+    parser.add_argument(
+        "--interval", type=float, default=1.0,
+        help="Interval between marks in hours, e.g. 2 or 0.5 (default: 1)",
     )
     parser.add_argument(
         "--buffer", type=float, default=40.0,
-        help="Buffer in seconds around the hour mark (default: 40)",
+        help="Buffer in seconds either side of each mark (default: 40)",
     )
     parser.add_argument(
         "--dry-run", action="store_true",
@@ -119,13 +151,25 @@ def main() -> None:
         print(f"Error: '{args.src}' is not a directory.", file=sys.stderr)
         sys.exit(1)
 
+    start_s = parse_start_time(args.start)
+    interval_s = int(args.interval * 3600)
+
+    # Build a human-readable list of the first few marks for confirmation
+    marks = []
+    t = start_s
+    while len(marks) < 6:
+        marks.append(f"{t // 3600:02d}:{(t % 3600) // 60:02d}")
+        t = (t + interval_s) % 86400
+    marks_preview = ", ".join(marks) + ", …"
+
     print(f"Source      : {args.src}")
     print(f"Destination : {args.dst}")
+    print(f"Marks       : {marks_preview}")
     print(f"Interval    : every {args.interval} h")
-    print(f"Buffer      : ±{args.buffer} s around hour mark")
+    print(f"Buffer      : ±{args.buffer} s around each mark")
     print(f"Mode        : {'DRY RUN' if args.dry_run else 'LIVE COPY'}\n")
 
-    run(args.src, args.dst, args.interval, args.buffer, args.dry_run)
+    run(args.src, args.dst, start_s, args.interval, args.buffer, args.dry_run)
 
 
 if __name__ == "__main__":
