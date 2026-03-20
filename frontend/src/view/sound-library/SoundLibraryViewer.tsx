@@ -4,6 +4,7 @@ import { IonSpinner } from '@ionic/react';
 import { useAudio } from '@/features/Audio/context';
 import { PlayPauseButton } from '@/features/Audio/PlayPauseButton';
 import { PlaybackRateSelect } from '@/features/Audio/PlaybackRate';
+import { NormalizeButton } from '@/features/Audio/NormalizeButton';
 import styles from './styles.module.scss';
 
 interface DataPNGMetadata {
@@ -648,6 +649,7 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
         <div className={styles.audioControls}>
           <PlayPauseButton />
           <PlaybackRateSelect />
+          <NormalizeButton />
         </div>
       </div>
     </div>
