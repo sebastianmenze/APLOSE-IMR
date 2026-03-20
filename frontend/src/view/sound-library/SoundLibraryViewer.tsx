@@ -4,6 +4,7 @@ import { IonSpinner } from '@ionic/react';
 import { useAudio } from '@/features/Audio/context';
 import { PlayPauseButton } from '@/features/Audio/PlayPauseButton';
 import { PlaybackRateSelect } from '@/features/Audio/PlaybackRate';
+import { NormalizeButton } from '@/features/Audio/NormalizeButton';
 import styles from './styles.module.scss';
 
 interface DataPNGMetadata {
@@ -112,6 +113,14 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
 
   // Use the global audio context
   const audio = useAudio();
+
+  // Track whether the user has explicitly seeked (to show the marker even at t=0)
+  const [hasSeeked, setHasSeeked] = useState(false);
+
+  // Reset seek flag when a new file is loaded
+  useEffect(() => {
+    setHasSeeked(false);
+  }, [jsonPath, basePath, wavFile]);
 
   // Controls
   const [colorscale, setColorscale] = useState('Greys_r');
@@ -335,7 +344,7 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
     const shapes: any[] = [];
 
     // Playback indicator line - animated with audio time
-    if (audio.time > 0) {
+    if (audio.time > 0 || hasSeeked) {
       shapes.push({
         type: 'line' as const,
         x0: audio.time,
@@ -389,7 +398,7 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
       paper_bgcolor: '#000',
       font: { color: '#fff' },
     };
-  }, [metadata, yAxisScale, audio.time, effectiveFreqMin, effectiveFreqMax]);
+  }, [metadata, yAxisScale, audio.time, hasSeeked, effectiveFreqMin, effectiveFreqMax]);
 
   const config = useMemo(() => ({
     displayModeBar: true,
@@ -404,6 +413,7 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
   const handlePlotClick = useCallback((event: any) => {
     if (event?.points?.[0]?.x !== undefined) {
       audio.seek(event.points[0].x as number);
+      setHasSeeked(true);
     }
   }, [audio]);
 
@@ -639,6 +649,7 @@ export const SoundLibraryViewer: React.FC<SoundLibraryViewerProps> = ({
         <div className={styles.audioControls}>
           <PlayPauseButton />
           <PlaybackRateSelect />
+          <NormalizeButton />
         </div>
       </div>
     </div>
