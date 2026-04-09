@@ -55,18 +55,25 @@ class NetCDFViewSet(ViewSet):
             backend_dir = Path(__file__).parent.parent.parent
             file_path = backend_dir / 'static' / 'examples' / 'example_spectrogram.nc'
         else:
-            file_path = Path(file_path)
+            # Security: restrict to allowed directory to prevent path traversal
+            allowed_dir = Path(settings.DATASET_IMPORT_FOLDER).resolve()
+            file_path = (allowed_dir / file_path).resolve()
+            if not str(file_path).startswith(str(allowed_dir) + os.sep) and file_path != allowed_dir:
+                return Response(
+                    {'error': 'Access denied'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
         # Security: Ensure file exists and is readable
         if not file_path.exists():
             return Response(
-                {'error': f'NetCDF file not found: {file_path}'},
+                {'error': 'NetCDF file not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
 
         if not file_path.is_file():
             return Response(
-                {'error': f'Path is not a file: {file_path}'},
+                {'error': 'Path is not a file'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -396,20 +403,17 @@ class NetCDFViewSet(ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Security: prevent directory traversal
-        if '..' in filename or filename.startswith('/'):
-            return Response(
-                {'error': 'Invalid filename'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         try:
             datawork_dir = Path(settings.DATAWORK_FOLDER if hasattr(settings, 'DATAWORK_FOLDER') else '/opt/datawork')
             example_dir = datawork_dir / 'dataset' / 'example'
-            file_path = example_dir / filename
+            # Security: resolve symlinks and verify file stays within example_dir
+            file_path = (example_dir / filename).resolve()
+            example_dir_resolved = example_dir.resolve()
+            if not str(file_path).startswith(str(example_dir_resolved) + os.sep):
+                return Response({'error': 'Access denied'}, status=status.HTTP_403_FORBIDDEN)
 
             if not file_path.exists() or not file_path.is_file():
-                raise Http404(f"File not found: {filename}")
+                raise Http404(f"File not found")
 
             # Determine content type
             content_types = {
@@ -569,37 +573,24 @@ class NetCDFViewSet(ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Security: prevent directory traversal
-        if '..' in filename or filename.startswith('/'):
-            return Response(
-                {'error': 'Invalid filename'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         try:
             datawork_dir = Path(settings.DATAWORK_FOLDER if hasattr(settings, 'DATAWORK_FOLDER') else '/opt/datawork')
             library_dir = datawork_dir / 'dataset' / 'sound_library'
-            file_path = library_dir / filename
-
-            logger.info(f"Sound library file request: {filename}")
-            logger.info(f"Looking in directory: {library_dir}")
-            logger.info(f"Full path: {file_path}")
-            logger.info(f"Directory exists: {library_dir.exists()}")
-            logger.info(f"File exists: {file_path.exists()}")
+            # Security: resolve symlinks and verify file stays within library_dir
+            file_path = (library_dir / filename).resolve()
+            library_dir_resolved = library_dir.resolve()
+            if not str(file_path).startswith(str(library_dir_resolved) + os.sep):
+                return Response({'error': 'Access denied'}, status=status.HTTP_403_FORBIDDEN)
 
             if not library_dir.exists():
-                logger.error(f"Sound library directory not found: {library_dir}")
+                logger.error("Sound library directory not found")
                 return Response(
-                    {'error': f'Sound library directory not found: {library_dir}'},
+                    {'error': 'Sound library directory not found'},
                     status=status.HTTP_404_NOT_FOUND
                 )
 
             if not file_path.exists() or not file_path.is_file():
-                # List available files for debugging
-                available_files = list(library_dir.glob('*.png'))[:10]
-                logger.error(f"File not found: {file_path}")
-                logger.error(f"Available PNG files: {[f.name for f in available_files]}")
-                raise Http404(f"File not found: {filename}. Directory: {library_dir}")
+                raise Http404("File not found")
 
             # Determine content type
             content_types = {

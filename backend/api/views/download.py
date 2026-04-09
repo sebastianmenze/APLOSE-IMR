@@ -18,6 +18,8 @@ from django.db.models.functions import Lower, Concat, Extract
 from django.http import HttpResponse
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
+from rest_framework.response import Response
+from rest_framework import status
 from rest_framework.viewsets import ViewSet
 
 from backend.api.models import (
@@ -354,6 +356,15 @@ class DownloadViewSet(ViewSet):
         analysis: SpectrogramAnalysis = get_object_or_404(
             SpectrogramAnalysis.objects.all(), pk=pk
         )
+
+        # Authorization: only staff/superusers or the dataset owner can download exports
+        dataset = analysis.dataset
+        is_owner = hasattr(dataset, 'owner') and dataset.owner == request.user
+        if not (request.user.is_staff or request.user.is_superuser or is_owner):
+            return Response(
+                {'detail': 'You do not have permission to download this export.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         # Create a buffer to write the zipfile into
         zip_buffer = io.BytesIO()
