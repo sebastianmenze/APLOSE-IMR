@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { IonSpinner } from '@ionic/react';
 import styles from './styles.module.scss';
 import { DataPNGViewer } from './DataPNGViewer';
-import { NetCDFViewer } from './NetCDFViewer';
 
 interface Analysis {
   fft: number;
@@ -23,47 +22,34 @@ interface ExampleFilesResponse {
   message?: string;
 }
 
-/**
- * Spectrogram Example Page
- *
- * Displays spectrogram files from the example dataset folder.
- * Supports both PNG/JSON format (new) and NetCDF format (legacy).
- */
 export const SpectrogramExamplePage: React.FC = () => {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [selectedRecordingIndex, setSelectedRecordingIndex] = useState(0);
   const [selectedFftIndex, setSelectedFftIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [basePath, setBasePath] = useState('');
-  const [useNetCDF, setUseNetCDF] = useState(false);
+  const [message, setMessage] = useState('');
 
-  // Fetch file list on mount
   useEffect(() => {
     const fetchFiles = async () => {
       try {
         setLoading(true);
         const response = await fetch('/api/netcdf/list-example-files/');
-        if (!response.ok) {
-          throw new Error('Failed to fetch file list');
-        }
+        if (!response.ok) throw new Error('Failed to fetch file list');
         const data: ExampleFilesResponse = await response.json();
-
-        if (!data.recordings || data.recordings.length === 0) {
-          // No files, show NetCDF example instead
-          setUseNetCDF(true);
-        } else {
+        if (data.recordings && data.recordings.length > 0) {
           setRecordings(data.recordings);
           setBasePath(data.basePath);
+        } else {
+          setMessage(data.message || 'No spectrogram files found in the example folder.');
         }
-        setLoading(false);
       } catch (e) {
         console.error('Error fetching files:', e);
-        // Fall back to NetCDF example
-        setUseNetCDF(true);
+        setMessage('Could not load example spectrograms.');
+      } finally {
         setLoading(false);
       }
     };
-
     fetchFiles();
   }, []);
 
@@ -110,22 +96,17 @@ export const SpectrogramExamplePage: React.FC = () => {
     );
   }
 
-  // Show NetCDF example if no PNG/JSON files available
-  if (useNetCDF) {
+  if (message || recordings.length === 0) {
     return (
       <div className={styles.pageContainer}>
         <div className={styles.exampleContainer}>
           <div className={styles.header}>
-            <h1>NetCDF Spectrogram Example</h1>
-            <p>Interactive Plotly visualization of a synthetic spectrogram</p>
+            <h1>Spectrogram Example</h1>
+            <p>{message || 'No spectrogram files found.'}</p>
             <p className={styles.note}>
-              <strong>Note:</strong> No PNG/JSON files found in the example folder.
-              Showing built-in NetCDF example. Place your spectrogram files in{' '}
+              Place PNG/JSON spectrogram files in{' '}
               <code>volumes/datawork/dataset/example/</code> to view them here.
             </p>
-          </div>
-          <div className={styles.spectrogramContainer}>
-            <NetCDFViewer spectrogramPath="" />
           </div>
         </div>
       </div>
@@ -135,7 +116,6 @@ export const SpectrogramExamplePage: React.FC = () => {
   return (
     <div className={styles.pageContainer}>
       <div className={styles.viewerWrapper}>
-        {/* Recording Selector */}
         {recordings.length > 1 && (
           <div className={styles.recordingSelector}>
             <label>Recording:</label>
@@ -152,7 +132,6 @@ export const SpectrogramExamplePage: React.FC = () => {
           </div>
         )}
 
-        {/* DataPNG Viewer with FFT selector */}
         {selectedRecording && selectedAnalysis && (
           <DataPNGViewer
             jsonPath={selectedAnalysis.json}
