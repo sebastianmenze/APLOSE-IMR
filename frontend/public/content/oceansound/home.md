@@ -1,6 +1,6 @@
 # Welcome to IMR OceanSound
 
-This platform was designed to centralize the storage and analysis of passive acoustic data at the Institute of marine research. Here you can find our library of example sound recordings of biological, physical and anthropogenic sound sources and access datasets for collaborative analysis. 
+This platform was designed to share sounds from the world's oecans and analyse acoustic datasets together. Here you can find our library of example sound recordings of biological, physical and anthropogenic sound sources and access datasets for collaborative analysis. 
 
 Instead of moving terabyte sized acoustic data between PCs, researchers can use this online platform to analyze, annotate and share their datasets. Acoustic recordings are displayed as editable spectrograms (visual representation of sound) that can be annotated to generate sound detection time series and training datasets for automatic detectors. Detection events from machine learning algorithms can be uploaded to the datasets and verified in a collaborative effort. 
 
