@@ -1,4 +1,4 @@
-# Welcome to IMR OceanSound
+# Welcome to OceanSound
 
 This platform was designed to share sounds from the world's oecans and analyse acoustic datasets together. Here you can find our library of example sound recordings of biological, physical and anthropogenic sound sources and access datasets for collaborative analysis. 
 
