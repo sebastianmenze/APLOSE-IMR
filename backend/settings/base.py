@@ -186,6 +186,5 @@ TINYMCE_DEFAULT_CONFIG = {
 
 GRAPHENE = {
     "SCHEMA": "backend.schema.schema",
-    "MIDDLEWARE": ["graphene_django.debug.middleware.DjangoDebugMiddleware"],
     "TESTING_ENDPOINT": "/api/graphql/public",
 }

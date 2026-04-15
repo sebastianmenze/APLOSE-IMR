@@ -52,7 +52,7 @@ api_urlpatterns = [
     path("", include(api_router.urls)),
     path("", include(aplose_router.urls)),
     path("", include(sql_router.urls)),
-    path("graphql", csrf_exempt(DRFAuthenticatedGraphQLView.as_view(graphiql=True))),
+    path("graphql", csrf_exempt(DRFAuthenticatedGraphQLView.as_view(graphiql=settings.DEBUG))),
 ]
 
 # All paths are prefixed with backend or api for easier proxy use
