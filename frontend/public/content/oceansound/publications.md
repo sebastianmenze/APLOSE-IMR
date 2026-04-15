@@ -1,5 +1,13 @@
 # Publications
 
+## Software
+
+**APLOSE: a scalable web-based annotation tool for marine bioacoustics**
+Erwan Keribin, Élodie Morin, Romain Vovard
+[https://doi.org/10.5281/zenodo.10467999](https://doi.org/10.5281/zenodo.10467999) — [GitHub](https://github.com/Project-OSmOSE/osmose-app)
+
+---
+
 ## 2025
 
 **Mapping encounters between Antarctic krill fishing vessels and air-breathing krill predators using acoustic data from the fishery**
