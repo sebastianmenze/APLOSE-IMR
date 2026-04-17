@@ -1,6 +1,6 @@
 # Welcome to OceanSound
 
-This website was designed to share sounds from the world's oceans and analyse acoustic datasets together. Here you can find our library of example sound recordings of biological, physical and anthropogenic sound sources and access datasets for collaborative analysis. It was created to analyze and share sound recordings from the Souther Ocean as part of this [AWR resarch project](/oceansound/awrproject).
+This website was designed to share sounds from the world's oceans and analyse acoustic datasets together. Here you can find our library of example sound recordings of biological, physical and anthropogenic sound sources and access datasets for collaborative analysis. It was created to analyze and share sound recordings from the Souther Ocean as part of this [AWR research project](/oceansound/awrproject).
 
 ![Description of image](/images/fwblow.png)
 
