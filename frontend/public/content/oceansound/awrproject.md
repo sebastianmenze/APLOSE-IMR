@@ -42,7 +42,7 @@ Each SoundTrap records on a **duty cycle** — 5 minutes of audio every hour —
 Once the recorders are retrieved, scientists will comb through the audio to identify which whale species were present, when, and at which locations. Combined with observations from marine mammal observers placed aboard the krill fishing vessels themselves, this will allow us to build a **picture of how whale distribution overlaps — or doesn't — with fishing activity** across space and time.
 
 
-![Description of image](/images/sspecan.png)
+![Description of image](/images/specan.png)
 
 ---
 
@@ -60,7 +60,7 @@ The project is a collaboration between:
 - **Association of Responsible Krill Harvesting Companies (ARK)**
 - **Instituto Antártico Chileno (ARK/INACH)**
 
-![Description of image](/images/20240129_141946(0).jpg)
+![Description of image](/images/mob.jpg)
 
 ---
 
