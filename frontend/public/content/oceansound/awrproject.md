@@ -1,8 +1,5 @@
 # Listening to the Antarctic Ocean: Tracking Whales in Krill Fishing Waters
 
-<!-- IMAGE SUGGESTION: Hero/banner image — aerial or wide-angle shot of the Antarctic Peninsula, 
-     ideally with ice, open water, and dramatic scenery. Suggested caption: 
-     "The Gerlache Strait, Antarctic Peninsula — one of the most productive marine ecosystems on Earth." -->
 ![Description of image](/images/finvessel.png)
 
 ## Why Are We Doing This?
@@ -19,21 +16,14 @@ This project, funded by the [Antarctic Wildlife Research Fund](https://www.antar
 
 ## The Approach: Passive Acoustic Monitoring
 
-<!-- IMAGE SUGGESTION: Close-up of a SoundTrap recorder or the bright orange mooring frame, 
-     either on deck or in the water. Suggested caption: 
-     "A SoundTrap underwater recorder — a self-contained listening device roughly the size of a thermos." -->
-
 Whales are vocal animals. They call, sing, and communicate constantly — and sound travels far underwater. This means we can detect their presence even when we can't see them, and even through the dark polar winter when conditions make visual surveys impossible.
 
 We are using **passive acoustic monitoring (PAM)**: underwater microphones (hydrophones) that sit silently on the seafloor and record whatever sounds pass by. The recorders we use are called **SoundTraps**, made by Ocean Instruments. Each one is compact, battery-powered, and can record continuously for months at a time.
 
 Three SoundTraps were deployed at carefully chosen locations across the Gerlache Strait and nearby waters. Each recorder sits anchored to the seafloor at depths of 274–352 metres. When we're ready to retrieve them, we send an acoustic signal from the surface — the recorder releases from its anchor, floats up, and we pick it up by zodiac. The bright orange frame makes it easy to spot.
 
-![Description of image](/images/gear.png)
+![Description of image|400](/images/gear.png)
 
-<!-- IMAGE SUGGESTION: Map showing the three deployment locations (Harry, Hermine, Ron) 
-     along the Antarctic Peninsula, with the Gerlache Strait labelled. 
-     Suggested caption: "Locations of the three SoundTrap moorings deployed in March 2024." -->
 
 ---
 
@@ -41,11 +31,8 @@ Three SoundTraps were deployed at carefully chosen locations across the Gerlache
 
 In February 2024, two researchers from the **Institute of Marine Research (IMR)** in Norway travelled to Ushuaia, Argentina, to join the Hurtigruten expedition vessel **M/S Roald Amundsen**. This was, to our knowledge, **the first time PAM moorings had been deployed from an expedition cruise vessel** in Antarctica. The success of this season demonstrates that tourist expedition ships can play a real role in supporting scientific data collection — opening up new possibilities for affordable, year-round Antarctic monitoring.
 
-<!-- IMAGE SUGGESTION: Photo of crew members or researchers deploying a SoundTrap over the side 
-     of the vessel, or lowering it from the tender pit. Suggested caption: 
-     "Dr. Federico Riet Sapriza and crew members deploying one of the SoundTraps from M/S Roald Amundsen." -->
 
-![Description of image](/images/stdeploy2024.png)
+![Description of image |800](/images/stdeploy2024.png)
 
 ---
 ## What Happens to the Data?
@@ -54,9 +41,6 @@ Each SoundTrap records on a **duty cycle** — 5 minutes of audio every hour —
 
 Once the recorders are retrieved, scientists will comb through the audio to identify which whale species were present, when, and at which locations. Combined with observations from marine mammal observers placed aboard the krill fishing vessels themselves, this will allow us to build a **picture of how whale distribution overlaps — or doesn't — with fishing activity** across space and time.
 
-<!-- IMAGE SUGGESTION: Example spectrogram (a visual representation of sound over time) 
-     showing a whale call. Suggested caption: 
-     "A spectrogram showing whale vocalisations recorded underwater — each shape represents a different sound." -->
 
 ![Description of image](/images/sspecan.png)
 
@@ -76,9 +60,6 @@ The project is a collaboration between:
 - **Association of Responsible Krill Harvesting Companies (ARK)**
 - **Instituto Antártico Chileno (ARK/INACH)**
 
-<!-- IMAGE SUGGESTION: Photo of Sebastian Menze or a team member giving a public lecture 
-     to expedition cruise guests onboard the vessel. Suggested caption: 
-     "Engaging expedition cruise passengers in the science — public outreach is a built-in part of the project." -->
 ![Description of image](/images/20240129_141946(0).jpg)
 
 ---
