@@ -19,7 +19,7 @@ const navItems: NavItem[] = [
   { path: '/oceansound/pam', label: 'Passive Acoustic Monitoring' },
   { path: '/oceansound/sounds', label: 'Sound Library' },
   { path: '/oceansound/publications', label: 'Publications' },
-  { path: '/oceansound/awrproject', label: 'AWR Project' },
+  { path: '/oceansound/awrproject', label: 'Antarctic krill fishery & marine mammals monitoring project' },
   { path: '/oceansound/about', label: 'About' },
 ];
 
