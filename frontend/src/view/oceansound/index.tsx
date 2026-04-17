@@ -6,6 +6,7 @@ import { About } from './pages/About';
 import { PassiveAcousticMonitoring } from './pages/PassiveAcousticMonitoring';
 import { Publications } from './pages/Publications';
 import { SoundLibraryPublic } from './pages/SoundLibraryPublic';
+import { AWRProject } from './pages/AWRProject';
 
 /**
  * OceanSound Landing Site
@@ -24,6 +25,7 @@ export const OceanSoundApp: React.FC = () => {
         <Route path="publications" element={<Publications />} />
         <Route path="sounds" element={<SoundLibraryPublic />} />
         <Route path="sounds/:fileIndex" element={<SoundLibraryPublic />} />
+        <Route path="awrproject" element={<AWRProject />} />
         <Route path="*" element={<Navigate to="/oceansound" replace />} />
       </Routes>
     </OceanSoundLayout>
