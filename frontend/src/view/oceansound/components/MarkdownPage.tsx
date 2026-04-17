@@ -306,6 +306,12 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
     const line = lines[i];
     const trimmedLine = line.trim();
 
+    // Skip HTML comments
+    if (trimmedLine.startsWith('<!--')) {
+      while (i < lines.length && !lines[i].includes('-->')) i++;
+      continue;
+    }
+
     // Table row
     if (trimmedLine.startsWith('|')) {
       flushList();
