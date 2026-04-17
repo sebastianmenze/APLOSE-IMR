@@ -1,4 +1,4 @@
-# Listening to the Antarctic Ocean: Tracking Whales in Krill Fishing Waters
+# Listening to the Southern Ocean: Monitoring marine mammals and Antarctic krill fishery interaction
 
 ![Description of image](/images/finvessel.png)
 
