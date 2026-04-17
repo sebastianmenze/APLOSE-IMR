@@ -111,8 +111,10 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
       const url = match[3];
 
       if (isImage) {
+        const [altText, widthStr] = altOrText.split('|');
+        const width = widthStr ? `${widthStr.trim()}px` : '100%';
         parts.push(
-          <img key={`img-${match.index}`} src={url} alt={altOrText} className={styles.markdownImage} />
+          <img key={`img-${match.index}`} src={url} alt={altText.trim()} className={styles.markdownImage} style={{ width }} />
         );
       } else if (url.startsWith('/')) {
         parts.push(
