@@ -36,14 +36,18 @@ export const MarkdownPage: React.FC<MarkdownPageProps> = ({ contentPath }) => {
         setError(null);
         const response = await fetch(contentPath);
         if (!response.ok) {
-          throw new Error('Content not found');
+          throw new Error(`HTTP ${response.status}`);
         }
         const text = await response.text();
+        // If nginx fell back to index.html, we got HTML instead of markdown
+        if (text.trimStart().startsWith('<!')) {
+          throw new Error(`Got HTML instead of markdown (nginx fallback). File not found at: ${contentPath}`);
+        }
         setContent(text);
         setLoading(false);
       } catch (e) {
         console.error('Error loading content:', e);
-        setError('Failed to load content');
+        setError(e instanceof Error ? e.message : 'Failed to load content');
         setLoading(false);
       }
     };
