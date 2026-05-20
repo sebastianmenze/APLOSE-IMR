@@ -39,7 +39,8 @@ type AnnotationState = {
   tempAnnotation?: TempAnnotation;
 
   _analysisID?: string;
-  _campaignID?: string
+  _campaignID?: string;
+  _spectrogramID?: string;
   _userID?: string
 }
 
@@ -111,15 +112,30 @@ export const AnnotatorAnnotationSlice = createSlice({
       payload: GetAnnotationTaskQuery,
       meta: { arg: { originalArgs: GetAnnotationTaskQueryVariables } }
     }) => {
+      const newSpectrogramID = action.meta.arg.originalArgs.spectrogramID;
+      const spectrogramChanged = state._spectrogramID !== newSpectrogramID;
+
       if (state._campaignID !== action.meta.arg.originalArgs.campaignID) {
         state._campaignID = action.meta.arg.originalArgs.campaignID
         state.id = initialState.id
       }
+      state._spectrogramID = newSpectrogramID;
+
       const annotations = [
           ...action.payload.annotationSpectrogramById?.task?.userAnnotations?.results ?? [],
         ...action.payload.annotationSpectrogramById?.task?.annotationsToCheck?.results ?? [],
       ].filter(a => a !== null).map(a => a!) ?? []
-      state.allAnnotations = convertGqlToAnnotations(annotations, action.meta.arg.originalArgs.phaseType, state._userID)
+      const serverAnnotations = convertGqlToAnnotations(annotations, action.meta.arg.originalArgs.phaseType, state._userID)
+
+      if (spectrogramChanged) {
+        // Navigating to a new spectrogram — full reset
+        state.allAnnotations = serverAnnotations;
+      } else {
+        // Same spectrogram, only FFT/analysis changed — preserve unsaved local annotations (negative IDs)
+        const localAnnotations = state.allAnnotations.filter(a => a.id < 0);
+        state.allAnnotations = [ ...serverAnnotations, ...localAnnotations ];
+      }
+
       const defaultAnnotation = [ ...state.allAnnotations ].reverse().pop();
       state.id = defaultAnnotation?.id
     })
