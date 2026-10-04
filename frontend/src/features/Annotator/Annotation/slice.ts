@@ -31,12 +31,9 @@ export type Annotation =
   update?: Annotation;
   acousticFeatures?: Features;
 };
-export type TempAnnotation = Pick<Annotation, 'type' | 'startTime' | 'startFrequency' | 'endTime' | 'endFrequency'>
-
 type AnnotationState = {
   allAnnotations: Annotation[];
   id?: number;
-  tempAnnotation?: TempAnnotation;
 
   _analysisID?: string;
   _campaignID?: string;
@@ -47,7 +44,6 @@ type AnnotationState = {
 const initialState: AnnotationState = {
   allAnnotations: [],
   id: undefined,
-  tempAnnotation: undefined,
 
   _analysisID: undefined,
   _campaignID: undefined,
@@ -86,12 +82,6 @@ export const AnnotatorAnnotationSlice = createSlice({
     },
     removeAnnotation: (state, action: { payload: Annotation }) => {
       state.allAnnotations = state.allAnnotations.filter(a => a.id !== action.payload.id)
-    },
-    setTempAnnotation: (state, action: { payload: TempAnnotation }) => {
-      state.tempAnnotation = action.payload
-    },
-    clearTempAnnotation: (state) => {
-      state.tempAnnotation = undefined
     },
   },
   extraReducers: builder => {
@@ -159,7 +149,6 @@ export const AnnotatorAnnotationSlice = createSlice({
   selectors: {
     selectAllAnnotations: state => state.allAnnotations,
     selectID: state => state.id,
-    selectTempAnnotation: state => state.tempAnnotation,
   },
 })
 
@@ -169,6 +158,4 @@ export const {
   addAnnotation,
   updateAnnotation,
   removeAnnotation,
-  setTempAnnotation,
-  clearTempAnnotation,
 } = AnnotatorAnnotationSlice.actions

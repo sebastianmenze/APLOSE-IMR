@@ -11,10 +11,6 @@ export const selectAllAnnotations = createSelector(
   selectAnnotator, AnnotatorAnnotationSlice.selectors.selectAllAnnotations,
 )
 
-export const selectTempAnnotation = createSelector(
-  selectAnnotator, AnnotatorAnnotationSlice.selectors.selectTempAnnotation,
-)
-
 export const selectAnnotation = createSelector(
   [
     selectAllAnnotations,
