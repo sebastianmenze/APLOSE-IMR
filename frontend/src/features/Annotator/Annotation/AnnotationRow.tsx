@@ -1,6 +1,6 @@
 import React, { Fragment, MouseEvent, useCallback, useMemo } from 'react';
 import { type Annotation, focusAnnotation } from './slice';
-import { TableContent, useModal } from '@/components/ui';
+import { TableContent } from '@/components/ui';
 import styles from './styles.module.scss';
 import { AnnotationLabelInfo } from './AnnotationLabelInfo';
 import {
@@ -18,7 +18,6 @@ import { AnnotationFrequencyInfo } from './AnnotationFrequencyInfo';
 import { AnnotationConfidenceInfo } from '@/features/Annotator/Annotation/AnnotationConfidenceInfo';
 import { RiRobot2Fill, RiUser3Fill } from 'react-icons/ri';
 import { IoChatbubbleEllipses, IoChatbubbleOutline } from 'react-icons/io5';
-import { InvalidateAnnotationModal } from '@/features/Annotator/Annotation/InvalidateAnnotationModal';
 import { IonButton, IonIcon } from '@ionic/react';
 import { checkmarkOutline, closeOutline } from 'ionicons/icons/index.js';
 import { type AploseNavParams, useKeyDownEvent } from '@/features/UX';
@@ -42,7 +41,6 @@ export const AnnotationRow: React.FC<{ annotation: Annotation }> = ({ annotation
   const { annotations } = useAnnotationTask()
   const focusTime = useFocusCanvasOnTime()
   const { user } = useCurrentUser()
-  const invalidateModal = useModal()
   const dispatch = useAppDispatch();
 
   const completeInfo: CompleteInfo | undefined = useMemo(() => {
@@ -74,9 +72,8 @@ export const AnnotationRow: React.FC<{ annotation: Annotation }> = ({ annotation
 
   const onInvalidate = useCallback((event: MouseEvent) => {
     event.stopPropagation()
-    if (annotation.type === 'Weak') invalidate(annotation)
-    else invalidateModal.open()
-  }, [ annotation, invalidate, annotation, invalidateModal ]);
+    invalidate(annotation)
+  }, [ annotation, invalidate ]);
 
   const remove = useCallback(() => {
     if (!isActive) return;
@@ -149,10 +146,5 @@ export const AnnotationRow: React.FC<{ annotation: Annotation }> = ({ annotation
             </IonButton>
           </Fragment> : <Fragment/> }
         </TableContent> }
-
-
-    <InvalidateAnnotationModal isOpen={ invalidateModal.isOpen }
-                               onClose={ invalidateModal.close }
-                               annotation={ annotation }/>
   </Fragment>
 }
