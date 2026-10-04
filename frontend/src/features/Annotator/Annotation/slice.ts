@@ -131,9 +131,25 @@ export const AnnotatorAnnotationSlice = createSlice({
         // Navigating to a new spectrogram — full reset
         state.allAnnotations = serverAnnotations;
       } else {
-        // Same spectrogram, only FFT/analysis changed — preserve unsaved local annotations (negative IDs)
+        // Same spectrogram, only FFT/analysis changed — preserve unsaved
+        // local state: brand-new annotations (negative IDs) in full, AND
+        // any local validate/invalidate on an already-existing annotation
+        // that hasn't been submitted yet. useValidateAnnotation/
+        // useInvalidateAnnotation (hooks.ts) only dispatch a local
+        // updateAnnotation — there's no immediate server mutation — so
+        // without this, the refetch below would silently overwrite a
+        // just-clicked yes/no toggle with the server's stale pre-click
+        // validation.
+        const previousById = new Map(state.allAnnotations.map(a => [ a.id, a ]));
+        const mergedServerAnnotations = serverAnnotations.map(server => {
+          const previous = previousById.get(server.id);
+          if (previous?.validation !== undefined) {
+            return { ...server, validation: previous.validation };
+          }
+          return server;
+        });
         const localAnnotations = state.allAnnotations.filter(a => a.id < 0);
-        state.allAnnotations = [ ...serverAnnotations, ...localAnnotations ];
+        state.allAnnotations = [ ...mergedServerAnnotations, ...localAnnotations ];
       }
 
       const defaultAnnotation = [ ...state.allAnnotations ].reverse().pop();
