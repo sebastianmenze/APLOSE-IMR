@@ -217,7 +217,7 @@ export const NetCDFSpectrogram: React.FC = () => {
         line: {
           color: labelColor,
           width: isFocused ? 3 : 2,
-          dash: (isInvalidated ? 'dash' : 'solid') as const,
+          dash: isInvalidated ? 'dash' as const : 'solid' as const,
         },
         fillcolor: 'rgba(0, 0, 0, 0)', // Transparent fill - only show border
         layer: 'above' as const,
