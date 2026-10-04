@@ -196,6 +196,7 @@ export const NetCDFSpectrogram: React.FC = () => {
           annotation.startFrequency == null || annotation.endFrequency == null) return;
 
       const isFocused = focusedAnnotation?.id === annotation.id;
+      const isInvalidated = annotation.validation?.isValid === false;
 
       // Get label color based on index in allLabels
       const labelIndex = allLabels.indexOf(annotation.label);
@@ -216,6 +217,7 @@ export const NetCDFSpectrogram: React.FC = () => {
         line: {
           color: labelColor,
           width: isFocused ? 3 : 2,
+          dash: (isInvalidated ? 'dash' : 'solid') as const,
         },
         fillcolor: 'rgba(0, 0, 0, 0)', // Transparent fill - only show border
         layer: 'above' as const,
