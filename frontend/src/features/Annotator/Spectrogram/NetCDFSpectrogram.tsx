@@ -1,10 +1,17 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import Plot from 'react-plotly.js';
-import { AnnotationType, useAnnotationTask } from '@/api';
+import { useParams } from 'react-router-dom';
+import { AnnotationPhaseType, AnnotationType, useAnnotationTask } from '@/api';
 import { useWindowHeight, useWindowWidth } from '@/features/Annotator/Canvas';
 import { NetCDFControls } from './NetCDFControls';
 import styles from './NetCDFSpectrogram.module.scss';
-import { useAddAnnotation, selectAllAnnotations, selectAnnotation } from '@/features/Annotator/Annotation';
+import {
+  useAddAnnotation,
+  useInvalidateAnnotation,
+  useValidateAnnotation,
+  selectAllAnnotations,
+  selectAnnotation,
+} from '@/features/Annotator/Annotation';
 import { useAppSelector, useAppDispatch } from '@/features/App';
 import { selectFocusLabel, selectAllLabels } from '@/features/Annotator/Label';
 import { selectFocusConfidence } from '@/features/Annotator/Confidence';
@@ -12,6 +19,7 @@ import { selectIsDrawingEnabled } from '@/features/Annotator/UX';
 import { useAudio } from '@/features/Audio';
 import { focusAnnotation } from '@/features/Annotator/Annotation/slice';
 import { selectFrequencyScaleType, selectPlotlyColorscale, selectPlotlyZmin, selectPlotlyZmax, selectPlotlyFreqMin, selectPlotlyFreqMax } from '@/features/Annotator/VisualConfiguration';
+import { type AploseNavParams } from '@/features/UX';
 
 interface NetCDFData {
   spectrogram: number[][];
@@ -64,6 +72,9 @@ export const NetCDFSpectrogram: React.FC = () => {
 
   // Annotation support
   const addAnnotation = useAddAnnotation();
+  const validateAnnotation = useValidateAnnotation();
+  const invalidateAnnotation = useInvalidateAnnotation();
+  const { phaseType } = useParams<AploseNavParams>();
   const focusedLabel = useAppSelector(selectFocusLabel);
   const focusedConfidence = useAppSelector(selectFocusConfidence);
   const isDrawingEnabled = useAppSelector(selectIsDrawingEnabled);
@@ -71,6 +82,15 @@ export const NetCDFSpectrogram: React.FC = () => {
   const focusedAnnotation = useAppSelector(selectAnnotation);
   const allLabels = useAppSelector(selectAllLabels);
   const dispatch = useAppDispatch();
+
+  // Manual double-click-on-a-box detection for the verification-mode
+  // valid/invalid toggle below -- Plotly's own plotly_doubleclick event
+  // carries no click coordinates (it only drives the "reset axes" action
+  // from config.doubleClick), so it can't tell us which annotation, if
+  // any, was double-clicked. Two plotly_click events landing on the same
+  // annotation within DOUBLE_CLICK_MS are treated as one double-click.
+  const lastBoxClickRef = useRef<{ id: number; time: number } | null>(null);
+  const DOUBLE_CLICK_MS = 400;
 
   // Audio support - only for playback indicator and seek
   const { seek, time: audioTime, duration: audioDuration } = useAudio();
@@ -280,7 +300,13 @@ export const NetCDFSpectrogram: React.FC = () => {
     displayModeBar: true,
     displaylogo: false,
     scrollZoom: false,
-    doubleClick: 'reset' as const,
+    // Was 'reset': Plotly's native double-click resets the axes on ANY
+    // double-click, including one landing on an annotation box -- which
+    // would now also toggle verification validity (onPlotClick below),
+    // so every toggle would be immediately followed by a disorienting
+    // zoom/pan reset. Disabled in favor of the modebar's own "Reset axes"
+    // button (displayModeBar: true, above) for that functionality.
+    doubleClick: false as const,
     responsive: true,
     modeBarButtonsToRemove: ['lasso2d'] as any,
     modeBarButtonsToAdd: [],
@@ -304,16 +330,30 @@ export const NetCDFSpectrogram: React.FC = () => {
         if (inTimeRange && inFreqRange) {
           // Focus this annotation
           dispatch(focusAnnotation(annotation));
+
+          const now = Date.now();
+          const isDoubleClick = lastBoxClickRef.current?.id === annotation.id
+            && (now - lastBoxClickRef.current.time) < DOUBLE_CLICK_MS;
+          lastBoxClickRef.current = isDoubleClick ? null : { id: annotation.id, time: now };
+
+          if (isDoubleClick && phaseType === AnnotationPhaseType.Verification) {
+            if (annotation.validation?.isValid === false) {
+              validateAnnotation(annotation);
+            } else {
+              invalidateAnnotation(annotation);
+            }
+          }
           return;
         }
       }
 
       // No annotation clicked, seek audio to clicked position
+      lastBoxClickRef.current = null;
       if (typeof clickedTime === 'number') {
         seek(clickedTime);
       }
     }
-  }, [seek, allAnnotations, dispatch]);
+  }, [seek, allAnnotations, dispatch, phaseType, validateAnnotation, invalidateAnnotation]);
 
   // Capture label/confidence when mousedown on plot (start of drag/selection)
   const onPlotMouseDown = useCallback(() => {

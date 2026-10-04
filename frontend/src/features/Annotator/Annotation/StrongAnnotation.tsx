@@ -1,18 +1,20 @@
-import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Fragment, MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Annotation, focusAnnotation } from './slice';
 import { ExtendedDiv } from '@/components/ui';
 import styles from './styles.module.scss';
 import { MOUSE_DOWN_EVENT } from '@/features/UX/Events';
 import { AnnotationHeadContent } from './Head';
-import { AnnotationType, useAnnotationTask } from '@/api';
+import { AnnotationPhaseType, AnnotationType, useAnnotationTask } from '@/api';
 import { formatTime } from '@/service/function';
-import { useUpdateAnnotation } from './hooks';
+import { useInvalidateAnnotation, useUpdateAnnotation, useValidateAnnotation } from './hooks';
 import { selectAllLabels, selectHiddenLabels } from '@/features/Annotator/Label';
 import { selectIsDrawingEnabled, selectIsSelectingPositionForAnnotation } from '@/features/Annotator/UX';
 import { useFrequencyScale, useTimeScale } from '@/features/Annotator/Axis';
 import { useAppDispatch, useAppSelector } from '@/features/App';
 import { selectTaskIsEditionAuthorized } from '@/features/Annotator/selectors';
 import { selectAnnotation } from '@/features/Annotator/Annotation/selectors';
+import { type AploseNavParams } from '@/features/UX';
+import { useParams } from 'react-router-dom';
 
 export const StrongAnnotation: React.FC<{
   annotation: Annotation
@@ -38,8 +40,23 @@ export const StrongAnnotation: React.FC<{
   const isInvalidated = useMemo(() => annotation.validation?.isValid === false, [ annotation ])
   const dispatch = useAppDispatch();
   const isSelectingAnnotationFrequency = useAppSelector(selectIsSelectingPositionForAnnotation)
+  const { phaseType } = useParams<AploseNavParams>();
+  const validateAnnotation = useValidateAnnotation();
+  const invalidateAnnotation = useInvalidateAnnotation();
 
   const focus = useCallback(() => dispatch(focusAnnotation(annotation)), [ annotation, dispatch ])
+
+  // Verification mode: double-clicking the box toggles valid/invalid,
+  // same gesture as the netCDF/Plotly spectrogram view (NetCDFSpectrogram.tsx).
+  const onDoubleClick = useCallback((event: MouseEvent) => {
+    if (phaseType !== AnnotationPhaseType.Verification) return;
+    event.stopPropagation();
+    if (annotation.validation?.isValid === false) {
+      validateAnnotation(annotation);
+    } else {
+      invalidateAnnotation(annotation);
+    }
+  }, [ phaseType, annotation, validateAnnotation, invalidateAnnotation ])
 
   // Time / Frequency
   const startTime = useMemo(() => annotation.update?.startTime ?? annotation.startTime, [ annotation ])
@@ -141,6 +158,7 @@ export const StrongAnnotation: React.FC<{
                       width={ annotation.type === AnnotationType.Box ? width : undefined }
                       height={ annotation.type === AnnotationType.Box ? height : undefined }
                       onUp={ onValidateMove }
+                      onDoubleClick={ onDoubleClick }
                       onTopMove={ onTopMove } onLeftMove={ onLeftMove }
                       onWidthMove={ annotation.type === AnnotationType.Box ? onWidthMove : undefined }
                       onHeightMove={ annotation.type === AnnotationType.Box ? onHeightMove : undefined }
