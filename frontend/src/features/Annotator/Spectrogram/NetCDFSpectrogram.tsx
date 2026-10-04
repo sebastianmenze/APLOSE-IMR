@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import Plot from 'react-plotly.js';
 import { useParams } from 'react-router-dom';
-import { AnnotationPhaseType, AnnotationType, useAnnotationTask } from '@/api';
+import { AnnotationPhaseType, AnnotationType, useAnnotationTask, useCurrentUser } from '@/api';
 import { useWindowHeight, useWindowWidth } from '@/features/Annotator/Canvas';
 import { NetCDFControls } from './NetCDFControls';
 import styles from './NetCDFSpectrogram.module.scss';
@@ -75,6 +75,7 @@ export const NetCDFSpectrogram: React.FC = () => {
   const validateAnnotation = useValidateAnnotation();
   const invalidateAnnotation = useInvalidateAnnotation();
   const { phaseType } = useParams<AploseNavParams>();
+  const { user } = useCurrentUser();
   const focusedLabel = useAppSelector(selectFocusLabel);
   const focusedConfidence = useAppSelector(selectFocusConfidence);
   const isDrawingEnabled = useAppSelector(selectIsDrawingEnabled);
@@ -336,7 +337,20 @@ export const NetCDFSpectrogram: React.FC = () => {
             && (now - lastBoxClickRef.current.time) < DOUBLE_CLICK_MS;
           lastBoxClickRef.current = isDoubleClick ? null : { id: annotation.id, time: now };
 
-          if (isDoubleClick && phaseType === AnnotationPhaseType.Verification) {
+          // Never let a user invalidate their own annotation (matches
+          // AnnotationRow.tsx's yes/no buttons, which hide themselves for
+          // the same reason: completeInfo?.annotator?.id === user?.id).
+          // This also sidesteps a real server error for a NEW, not-yet-
+          // submitted annotation specifically: submitAnnotationTask's
+          // nested AnnotationValidationSerializerInput requires a non-null
+          // "annotation" FK, which the frontend can't supply yet for an
+          // annotation that doesn't have a real (server-assigned) id at
+          // payload-construction time -- invalidating your own brand-new
+          // box used to 500 with "{'annotation': ['This field may not be
+          // null.']}" for exactly that reason.
+          const isOwnAnnotation = !!user?.id && annotation.annotator === user.id;
+
+          if (isDoubleClick && phaseType === AnnotationPhaseType.Verification && !isOwnAnnotation) {
             if (annotation.validation?.isValid === false) {
               validateAnnotation(annotation);
             } else {
