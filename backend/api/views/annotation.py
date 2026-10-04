@@ -161,7 +161,18 @@ class AnnotationViewSet(viewsets.ReadOnlyModelViewSet):
         )
         none_end_frequency = (
             annotation["end_frequency"] is None
-            or float(row["end_frequency"]) == analysis.fft.sampling_frequency / 2
+            or float(row["end_frequency"])
+            == (
+                analysis.fft.sampling_frequency
+                if analysis.fft is not None
+                # Legacy `fft` FK is null for every modern "simple
+                # NetCDF dataset" import (SpectrogramAnalysis.fft's
+                # own docstring: "Old OSEkit field - kept for
+                # backward compatibility (nullable)") -- those use
+                # sample_rate/nfft/hop_length directly instead.
+                else analysis.sample_rate
+            )
+            / 2
         )
 
         if (
