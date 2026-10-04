@@ -30,12 +30,12 @@ export const StrongAnnotation: React.FC<{
   }, [ isEditionAuthorized, annotation, focusedAnnotation ]);
   const [ isMouseHover, setIsMouseHover ] = useState<boolean>(false);
   const isHidden = useMemo(() => {
-    if (hiddenLabels.includes(annotation.label)) return true
-    // Hide updated annotations
-    if (annotation.update) return false;
-    // Hide invalidated annotations
-    return annotation.validation?.isValid == false;
+    return hiddenLabels.includes(annotation.label)
   }, [ hiddenLabels, annotation ])
+  // Invalidated in verification mode -- kept visible (not hidden, as it
+  // used to be) but drawn with a dashed border instead of solid, so a
+  // reviewer can still see where the detector marked it.
+  const isInvalidated = useMemo(() => annotation.validation?.isValid === false, [ annotation ])
   const dispatch = useAppDispatch();
   const isSelectingAnnotationFrequency = useAppSelector(selectIsSelectingPositionForAnnotation)
 
@@ -154,7 +154,8 @@ export const StrongAnnotation: React.FC<{
                         colorClassName,
                         isActive ? '' : styles.disabled,
                         isDrawingEnabled ? '' : styles.editDisabled,
-                        isActive && isSelectingAnnotationFrequency ? styles.pointerSelect : ''
+                        isActive && isSelectingAnnotationFrequency ? styles.pointerSelect : '',
+                        isInvalidated ? styles.invalidated : ''
                       ].join(' ') }>
 
     { (isMouseHover || isActive) &&

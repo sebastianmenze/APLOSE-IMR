@@ -26,6 +26,10 @@ $box-width: 3px;
     pointer-events: auto !important;
     cursor: crosshair;
   }
+
+  &.invalidated {
+    border-style: dashed;
+  }
 }
 
 .point {
